@@ -19,7 +19,7 @@ conductor | numeric
 is_motivic | bool
 motivic_weight | smallint
 degree | smallint
-mus | numeric[][] | the shifts of gamma_r (double array for Maass forms, etc.). NOTE: must make decision regarding mus
+mus | numeric[][] | the shifts of gamma_r (double array for Maass forms, etc.). NOTE: must make decision regarding mu = [0,1] vs nu = [1]
 nus | numeric[][] | the shifts of gamma_c (double array for Maass forms, etc.)
 primitive | bool |
 root_number_arg | numeric[] | in some range (as in arb)
