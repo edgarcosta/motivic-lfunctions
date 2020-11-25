@@ -1,9 +1,9 @@
 import re
 from six import string_types
 from collections import Counter
-from sage.all import cached_function, ZZ, RR, GCD, ceil, RealField, ComplexField
+from sage.all import psi, cached_function, ZZ, RR, GCD, ceil, RealField, ComplexField
 from sage.rings.complex_number import ComplexNumber
-from lmfdb.encoding import LmfdbRealLiteral
+from lmfdb.backend.encoding import LmfdbRealLiteral
 from dirichlet_conrey import DirichletGroup_conrey, DirichletCharacter_conrey
 
 HEADER = "id|origin|primitive|conductor|central_character|self_dual|motivic_weight|Lhash|degree|order_of_vanishing|algebraic|z1|gamma_factors|trace_hash|root_angle".split("|")
@@ -38,6 +38,10 @@ class ComplexLiteral(ComplexNumber):
                     b = '-1'
                 elif b in ['+', '']:
                     b = '1'
+                elif b is None:
+                    b = '0'
+                if a is None:
+                    a = '0'
                 # The following is a good guess for the bit-precision,
                 # but we use LmfdbRealLiterals to ensure that our number
                 # prints the same as we got it.
@@ -66,7 +70,7 @@ class ComplexLiteral(ComplexNumber):
                 if not isinstance(x, LmfdbRealLiteral):
                     raise TypeError("Object '%s' of type %s not valid input" % (x, type(x)))
                 setattr(self, xname, x)
-        ComplexNumber.__init__(self, self.real(), self.imag())
+        ComplexNumber.__init__(self, parent, self.real(), self.imag())
 
     def real(self):
         return self._real_literal
@@ -112,7 +116,9 @@ def spectral_str(x, conjugate=False):
     return res
 
 def load(x, H, T):
-    if T == "text":
+    if x == r'\N':
+        return None
+    elif T == "text":
         return x
     elif T == "boolean":
         return True if x == "t" else False
@@ -124,11 +130,13 @@ def load(x, H, T):
         # Use LmfdbRealLiteral so that we can get the original string back
         return LmfdbRealLiteral(RR, x)
     elif H == "gamma_factors":
-        return [[CompexLiteral(s) for s in piece[1:-1].split(",")] for piece in x[1:-1].replace(" ","").split("],[")]
+        return [[ComplexLiteral(s) for s in piece[1:-1].split(",") if s] for piece in x[1:-1].replace(" ","").split("],[")]
     else:
         raise RuntimeError((x, H, T))
 
 def save(x, H, T):
+    if x is None:
+        return r'\N'
     if T == "text":
         return x
     elif T == "boolean":
@@ -142,11 +150,11 @@ def save(x, H, T):
     else:
         raise RuntimeError((x, H, T))
 
-def process_line(line):
-    L = {H: load(x, H, T) for (x, H, T) in zip(line.split("|"), HEADER, TYPES)}
+def process_line(line, normalized=False):
+    L = {H: load(x, H, T) for (x, H, T) in zip(line.strip().split("|"), HEADER, TYPES)}
     L["central_character"] = primitivize(L["central_character"])
-    make_label(L) # also sets mus and nus
-    L["analytic_conductor"] = analytic_conductor(L[)
+    GR, GC = make_label(L, normalized) # also sets mus and nus in L
+    L["analytic_conductor"] = L["conductor"] * conductor_an(GR, GC)
     return "|".join(save(L[H], H, T) for (H, T) in zip(OUTHEADER, OUTTYPES))
 
 @cached_function
@@ -159,9 +167,9 @@ def primitivize(label):
     char = DirichletCharacter_conrey(DirGroup(m), n).primitive_character()
     return "%d.%d" % (char.modulus(), char.number())
 
-def make_label(L):
+def make_label(L, normalized=False):
     GR, GC = L['gamma_factors']
-    analytic_normalization = L['motivic_weight']/2
+    analytic_normalization = 0 if normalized else L['motivic_weight']/2
     GR = [CDF(elt) + analytic_normalization for elt in GR]
     GC = [CDF(elt) + analytic_normalization for elt in GC]
     b, e = L['conductor'].perfect_power()
@@ -220,6 +228,23 @@ def make_label(L):
                     continue
                 end += spectral_str(elt.imag(), conjugate=conjugate)
     L["prelabel"] = beginning + gammas + end
+    return GR, GC
 
-def analytic_conductor(L):
-    
+logpi = RR.pi().log()
+log2pi = (2 * RR.pi()).log()
+
+def log_L_inf(s, mu, nu):
+    return ((sum([psi((s + elt) / 2) for elt in  mu]) -
+             len(mu) * logpi) / 2 +
+            sum([psi(s + elt) for elt in nu]) -
+            len(nu) * log2pi)
+
+
+def conductor_an(GR, GC):
+    return (2*log_L_inf(1/2, mu, nu).real()).exp()
+
+def run(infile, outfile):
+    with open(infile) as Fin:
+        with open(outfile, 'w') as Fout:
+            for line in Fin:
+                Fout.write(process_line(line) + "\n")
