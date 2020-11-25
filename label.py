@@ -130,7 +130,7 @@ def load(x, H, T):
         # Use LmfdbRealLiteral so that we can get the original string back
         return LmfdbRealLiteral(RR, x)
     elif H == "gamma_factors":
-        return [[ComplexLiteral(s) for s in piece[1:-1].split(",") if s] for piece in x[1:-1].replace(" ","").split("],[")]
+        return [[ComplexLiteral(s) for s in piece.split(",") if s] for piece in x[2:-2].replace(" ","").split("],[")]
     else:
         raise RuntimeError((x, H, T))
 
@@ -141,7 +141,7 @@ def save(x, H, T):
         return x
     elif T == "boolean":
         return "t" if x else "f"
-    elif T in ["bigint", "smallint"] or H in ["conductor", "mu_imag", "double_nu_imag", "z1"]:
+    elif T in ["bigint", "smallint", "double precision"] or H in ["conductor", "z1"]:
         return str(x)
     elif T in ["smallint[]", "numeric[]", "bigint[]"]:
         return "{%s}" % (",".join(repr(a) for a in x))
@@ -155,6 +155,7 @@ def process_line(line, normalized=False):
     L["central_character"] = primitivize(L["central_character"])
     GR, GC = make_label(L, normalized) # also sets mus and nus in L
     L["analytic_conductor"] = L["conductor"] * conductor_an(GR, GC)
+    L["bad_primes"] = L["conductor"].support()
     return "|".join(save(L[H], H, T) for (H, T) in zip(OUTHEADER, OUTTYPES))
 
 @cached_function
@@ -241,7 +242,7 @@ def log_L_inf(s, mu, nu):
 
 
 def conductor_an(GR, GC):
-    return (2*log_L_inf(1/2, mu, nu).real()).exp()
+    return (2*log_L_inf(1/2, GR, GC).real()).exp()
 
 def run(infile, outfile):
     with open(infile) as Fin:
