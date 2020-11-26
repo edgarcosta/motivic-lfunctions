@@ -8,7 +8,7 @@ from dirichlet_conrey import DirichletGroup_conrey, DirichletCharacter_conrey
 
 HEADER = "id|origin|primitive|conductor|central_character|self_dual|motivic_weight|Lhash|degree|order_of_vanishing|algebraic|z1|gamma_factors|trace_hash|root_angle".split("|")
 TYPES = "bigint|text|boolean|numeric|text|boolean|smallint|text|smallint|smallint|boolean|numeric|jsonb|bigint|double precision".split("|")
-OUTHEADER = "id|origin|primitive|conductor|central_character|self_dual|motivic_weight|Lhash|degree|order_of_vanishing|algebraic|z1|gamma_factors|trace_hash|root_angle|prelabel|analytic_conductor|mu_real|mu_imag|nu_real|nu_imag_doubled|bad_primes".split("|")
+OUTHEADER = "id|origin|primitive|conductor|central_character|self_dual|motivic_weight|Lhash|degree|order_of_vanishing|algebraic|z1|gamma_factors|trace_hash|root_angle|prelabel|analytic_conductor|mu_real|mu_imag|nu_real_doubled|nu_imag|bad_primes".split("|")
 OUTTYPES = "bigint|text|boolean|numeric|text|boolean|smallint|text|smallint|smallint|boolean|numeric|jsonb|bigint|double precision|text|double precision|smallint[]|numeric[]|smallint[]|numeric[]|bigint[]".split("|")
 
 CC_RE = re.compile(r'^(?=[iI.\d+-])([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?(?![iI.\d]))?\s*(?:([+-]?\s*(?:(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)?)?\s*\*?\s*[iI])?$')
@@ -229,7 +229,7 @@ def make_label(L, normalized=False):
                     continue
                 end += spectral_str(elt.imag(), conjugate=conjugate)
     L["prelabel"] = beginning + gammas + end
-    return GR, GC
+    return tuple(GR), tuple(GC)
 
 logpi = RR.pi().log()
 log2pi = (2 * RR.pi()).log()
