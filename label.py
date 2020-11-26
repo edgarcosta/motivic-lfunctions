@@ -3,6 +3,7 @@ from six import string_types
 from collections import Counter
 from sage.all import psi, cached_function, ZZ, RR, GCD, ceil, RealField, ComplexField
 from sage.rings.complex_number import ComplexNumber
+from sage.rings.real_mpfr import RealLiteral
 from lmfdb.backend.encoding import LmfdbRealLiteral
 from dirichlet_conrey import DirichletGroup_conrey, DirichletCharacter_conrey
 
@@ -10,6 +11,20 @@ HEADER = "id|origin|primitive|conductor|central_character|self_dual|motivic_weig
 TYPES = "bigint|text|boolean|numeric|text|boolean|smallint|text|smallint|smallint|boolean|numeric|jsonb|bigint|double precision".split("|")
 OUTHEADER = "id|origin|primitive|conductor|central_character|self_dual|motivic_weight|Lhash|degree|order_of_vanishing|algebraic|z1|gamma_factors|trace_hash|root_angle|prelabel|analytic_conductor|mu_real|mu_imag|nu_real_doubled|nu_imag|bad_primes".split("|")
 OUTTYPES = "bigint|text|boolean|numeric|text|boolean|smallint|text|smallint|smallint|boolean|numeric|jsonb|bigint|double precision|text|double precision|smallint[]|numeric[]|smallint[]|numeric[]|bigint[]".split("|")
+
+# This code comes from lmfdb.backend.encoding, but we don't want to import the lmfdb (in order to avoid db connection time)
+class LmfdbRealLiteral(RealLiteral):
+    """
+    A real number that prints using the string used to construct it.
+    """
+
+    def __init__(self, parent, x=0, base=10):
+        if not isinstance(x, string_types):
+            x = str(x)
+        RealLiteral.__init__(self, parent, x, base)
+
+    def __repr__(self):
+        return self.literal
 
 CC_RE = re.compile(r'^(?=[iI.\d+-])([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?(?![iI.\d]))?\s*(?:([+-]?\s*(?:(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)?)?\s*\*?\s*[iI])?$')
 class ComplexLiteral(ComplexNumber):
