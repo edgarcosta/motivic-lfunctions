@@ -8,7 +8,7 @@ from dirichlet_conrey import DirichletGroup_conrey, DirichletCharacter_conrey
 
 HEADER = "id|origin|primitive|conductor|central_character|self_dual|motivic_weight|Lhash|degree|order_of_vanishing|algebraic|z1|gamma_factors|trace_hash|root_angle".split("|")
 TYPES = "bigint|text|boolean|numeric|text|boolean|smallint|text|smallint|smallint|boolean|numeric|jsonb|bigint|double precision".split("|")
-OUTHEADER = "id|origin|primitive|conductor|central_character|self_dual|motivic_weight|Lhash|degree|order_of_vanishing|algebraic|z1|gamma_factors|trace_hash|root_angle|prelabel|analytic_conductor|mu_real|mu_imag|double_nu_real|double_nu_imag|bad_primes".split("|")
+OUTHEADER = "id|origin|primitive|conductor|central_character|self_dual|motivic_weight|Lhash|degree|order_of_vanishing|algebraic|z1|gamma_factors|trace_hash|root_angle|prelabel|analytic_conductor|mu_real|mu_imag|nu_real|nu_imag_doubled|bad_primes".split("|")
 OUTTYPES = "bigint|text|boolean|numeric|text|boolean|smallint|text|smallint|smallint|boolean|numeric|jsonb|bigint|double precision|text|double precision|smallint[]|numeric[]|smallint[]|numeric[]|bigint[]".split("|")
 
 CC_RE = re.compile(r'^(?=[iI.\d+-])([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?(?![iI.\d]))?\s*(?:([+-]?\s*(?:(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)?)?\s*\*?\s*[iI])?$')
@@ -196,13 +196,13 @@ def make_label(L, normalized=False):
     GC.sort(key=CCtuple)
 
     L["mu_imag"] = [elt.imag() for elt in GR]
-    L["double_nu_imag"] = [2*elt.imag() for elt in GC]
+    L["nu_imag"] = [elt.imag() for elt in GC]
 
     # deal with real parts
     GR_real = [elt.real() for elt in GR]
     GC_real = [elt.real() for elt in GC]
     L["mu_real"] = [x.round() for x in GR_real]
-    L["double_nu_real"] = [(2*x).round() for x in GC_real]
+    L["nu_real_doubled"] = [(2*x).round() for x in GC_real]
     GRcount = Counter(GR_real)
     GCcount = Counter(GC_real)
     ge = GCD(GCD(list(GRcount.values())), GCD(list(GCcount.values())))
@@ -249,3 +249,4 @@ def run(infile, outfile):
         with open(outfile, 'w') as Fout:
             for line in Fin:
                 Fout.write(process_line(line) + "\n")
+
