@@ -240,7 +240,7 @@ def log_L_inf(s, mu, nu):
             sum([psi(s + elt) for elt in nu]) -
             len(nu) * log2pi)
 
-
+@cached_function
 def conductor_an(GR, GC):
     return (2*log_L_inf(1/2, GR, GC).real()).exp()
 
