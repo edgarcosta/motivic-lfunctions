@@ -2,7 +2,10 @@ import re
 from six import string_types
 from collections import Counter
 from sage.all import psi, cached_function, ZZ, RR, GCD, ceil, RealField, ComplexField, CDF
-from sage.rings.complex_mpfr import ComplexNumber
+try:
+    from sage.rings.complex_mpfr import ComplexNumber
+except ModuleNotFoundError:
+    from sage.rings.complex_number import ComplexNumber
 from sage.rings.real_mpfr import RealLiteral
 #from lmfdb.backend.encoding import LmfdbRealLiteral
 from dirichlet_conrey import DirichletGroup_conrey, DirichletCharacter_conrey
