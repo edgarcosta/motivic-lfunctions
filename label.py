@@ -265,3 +265,6 @@ def run(infile, outfile):
             for line in Fin:
                 Fout.write(process_line(line) + "\n")
 
+if __name__ == "__main__":
+    import sys
+    run(sys.argv[1], sys.argv[2])
