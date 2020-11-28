@@ -4,7 +4,7 @@ from collections import Counter
 from sage.all import psi, cached_function, ZZ, RR, GCD, ceil, RealField, ComplexField
 from sage.rings.complex_number import ComplexNumber
 from sage.rings.real_mpfr import RealLiteral
-from lmfdb.backend.encoding import LmfdbRealLiteral
+#from lmfdb.backend.encoding import LmfdbRealLiteral
 from dirichlet_conrey import DirichletGroup_conrey, DirichletCharacter_conrey
 
 HEADER = "id|origin|primitive|conductor|central_character|self_dual|motivic_weight|Lhash|degree|order_of_vanishing|algebraic|z1|gamma_factors|trace_hash|root_angle".split("|")
