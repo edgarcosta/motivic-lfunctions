@@ -2,7 +2,7 @@ import re
 from six import string_types
 from collections import Counter
 from sage.all import psi, cached_function, ZZ, RR, GCD, ceil, RealField, ComplexField, CDF
-from sage.rings.complex_number import ComplexNumber
+from sage.rings.complex_mpfr import ComplexNumber
 from sage.rings.real_mpfr import RealLiteral
 #from lmfdb.backend.encoding import LmfdbRealLiteral
 from dirichlet_conrey import DirichletGroup_conrey, DirichletCharacter_conrey
@@ -145,7 +145,7 @@ def load(x, H, T):
         # Use LmfdbRealLiteral so that we can get the original string back
         return LmfdbRealLiteral(RR, x)
     elif H == "gamma_factors":
-        return [[ComplexLiteral(s) for s in piece.split(",") if s] for piece in x[2:-2].replace(" ","").split("],[")]
+        return [[ComplexLiteral(s) for s in piece.split(",") if s] for piece in x[2:-2].replace('"','').replace(" ","").split("],[")]
     else:
         raise RuntimeError((x, H, T))
 
