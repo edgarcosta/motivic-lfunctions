@@ -29,7 +29,7 @@ class LmfdbRealLiteral(RealLiteral):
     def __repr__(self):
         return self.literal
 
-CC_RE = re.compile(r'^(?=[iI.\d+-])([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?(?![iI.\d]))?\s*(?:([+-]?\s*(?:(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)?)?\s*\*?\s*[iI])?$')
+CC_RE = re.compile(r'^(?=[iI.\d+-])([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?(?![\*iI.\d]))?\s*(?:([+-]?\s*(?:(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)?)?\s*\*?\s*[iI])?$')
 class ComplexLiteral(ComplexNumber):
     def __init__(self, real, imag=None):
         def find_prec(s):
@@ -51,6 +51,11 @@ class ComplexLiteral(ComplexNumber):
                 if M is None:
                     raise ValueError("'%s' not a valid complex number" % real)
                 a, b = M.groups()
+
+                if a is None:
+                    a = '0'
+
+
                 # handle missing coefficient of i
                 if b == '-':
                     b = '-1'
@@ -58,13 +63,14 @@ class ComplexLiteral(ComplexNumber):
                     b = '1'
                 elif b is None:
                     b = '0'
-                if a is None:
-                    a = '0'
+
                 # The following is a good guess for the bit-precision,
                 # but we use LmfdbRealLiterals to ensure that our number
                 # prints the same as we got it.
                 prec = max(find_prec(a), find_prec(b), 53)
                 parent = ComplexField(prec)
+                assert parent(real) == parent("a", "b")
+
                 R = parent._real_field()
                 self._real_literal = LmfdbRealLiteral(R, a)
                 self._imag_literal = LmfdbRealLiteral(R, b)
@@ -220,6 +226,7 @@ def make_label(L, normalized=False):
     GR_real = [elt.real() for elt in GR]
     GC_real = [elt.real() for elt in GC]
     L["mu_real"] = [x.round() for x in GR_real]
+    assert set(L["mu_real")).issubset(set([0,1]))
     L["nu_real_doubled"] = [(2*x).round() for x in GC_real]
     GRcount = Counter(GR_real)
     GCcount = Counter(GC_real)
