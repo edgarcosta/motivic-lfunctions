@@ -35,7 +35,7 @@ class ComplexLiteral(ComplexNumber):
         def find_prec(s):
             if isinstance(s, string_types):
                 # strip negatives, period and exponent
-                s = s.replace("-","").replace(".","")
+                s = s.replace("-","").replace(".","").rstrip("0")
                 if "e" in s:
                     s = s[:s.find("e")]
                 return floor(len(s) * 3.32192809488736)
