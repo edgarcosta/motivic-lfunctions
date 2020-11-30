@@ -172,7 +172,7 @@ def save(x, H, T):
     elif H == "gamma_factors":
         out = repr(x).replace(" ","")
         if 'I' in out:
-            out = str([[str(repr(g)) for g in G] for G in x])
+            out = str([[str(repr(g)) for g in G] for G in x]).replace(" ","").replace("'",'"')
         return out
     else:
         raise RuntimeError((x, H, T))
