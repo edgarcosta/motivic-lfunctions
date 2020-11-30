@@ -69,7 +69,7 @@ class ComplexLiteral(ComplexNumber):
                 # prints the same as we got it.
                 prec = max(find_prec(a), find_prec(b), 53)
                 parent = ComplexField(prec)
-                assert parent(real) == parent(a, b)
+                assert parent(real) == parent(a, b), "a = %s, b = %s, real = %s diff = %s" % (a, b, real, parent(real) - parent(a,b))
 
                 R = parent._real_field()
                 self._real_literal = LmfdbRealLiteral(R, a)
