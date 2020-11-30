@@ -34,11 +34,11 @@ class ComplexLiteral(ComplexNumber):
     def __init__(self, real, imag=None):
         def find_prec(s):
             if isinstance(s, string_types):
-                # strip negatives and exponent
-                s = s.replace("-","")
+                # strip negatives, period and exponent
+                s = s.replace("-","").replace(".","")
                 if "e" in s:
                     s = s[:s.find("e")]
-                return ceil(len(s) * 3.322)
+                return floor(len(s) * 3.32192809488736)
             else:
                 try:
                     return s.parent().precision()
