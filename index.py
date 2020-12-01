@@ -108,7 +108,9 @@ def compute_index(res):
                         break
                     else:
                         continue
-                if compare(x,y): # they look equal
+                if x['Lhash'] == y['Lhash']:
+                    continue
+                elif compare(x,y): # they look equal, but different Lhash
                     x['index'] = -1
                     y['index'] = -1
             if 'index' not in x:
