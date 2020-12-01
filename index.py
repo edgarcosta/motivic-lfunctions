@@ -98,8 +98,16 @@ def compute_index(res):
                 assert x['index'] == -1
                 continue
             for j, y in enumerate(res):
-                if i <= j:
+                if i == j:
                     continue
+                if j < i:
+                    if x['Lhash'] == y['Lhash']:
+                        # y already has an index
+                        assert x['line'].split('|', 1)[1] == y['line'].split('|', 1)[1]
+                        x['index'] = y['index']
+                        break
+                    else:
+                        continue
                 if compare(x,y): # they look equal
                     x['index'] = -1
                     y['index'] = -1
