@@ -68,7 +68,19 @@ def find_prec(s):
         except Exception:
             return 53
 
-def compare(x, y):
+
+def hash_compare(x,y):
+    if x['Lhash'] == y['Lhash']:
+        return True
+    if x['trace_hash'] is not None and y['trace_hash'] is not None:
+        if x['trace_hash'] == y['trace_hash']:
+            assert invariants_compare(x,y), "%s\n%s\n" % (x, y)
+            return True
+        else:
+            return False
+    return None
+
+def invariants_compare(x, y):
     if x['primitive'] != y['primitive']:
         return False
     # check if z1s match
@@ -78,12 +90,22 @@ def compare(x, y):
     for k in range(l -3):
         if z1s[0][k] != z1s[1][k]:
             return False
-    if x['trace_hash'] and y['trace_hash'] and x['trace_hash'] != y['trace_hash']:
+    if x['order_of_vanishing'] != y['order_of_vanishing']:
         return False
     if (x['root_angle'] - y['root_angle']).abs() > 1e-7:
         return False
-    # might be a false positive
+    # all the invariants agree
     return True
+
+def compare(x, y):
+    c = hash_compare(x, y)
+    if c is None: #the Lhash differs, but might still be the same L-function
+        if invariants_compare(x, y):
+            return None
+        else:
+            return False
+    else:
+        return c
 
 
 def compute_index(res):
@@ -100,19 +122,20 @@ def compute_index(res):
             for j, y in enumerate(res):
                 if i == j:
                     continue
-                if j < i:
-                    if x['Lhash'] == y['Lhash']:
-                        # y already has an index
-                        assert x['line'].split('|', 1)[1] == y['line'].split('|', 1)[1]
-                        x['index'] = y['index']
-                        break
-                    else:
-                        continue
-                if x['Lhash'] == y['Lhash']:
-                    continue
-                elif compare(x,y): # they look equal, but different Lhash
+                c = compare(x, y)
+                if c is None:
                     x['index'] = -1
                     y['index'] = -1
+                    break
+                elif c:
+                    if j > i:
+                        # y doesn't have an index
+                        continue
+                    else: # J < i
+                        assert invariants_compare(x, y)
+                        print(x['origin'], y['origin'])
+                        x['index'] = y['index']
+                        break
             if 'index' not in x:
                 x['index'] = index
                 index += 1
