@@ -77,6 +77,13 @@ def find_prec(s):
 def hash_compare(x,y):
     if x['Lhash'] == y['Lhash']:
         return True
+    # use origin to compare L-functions originating from modular forms
+    # as there are trace collisions for not small degree
+    if all(elt['origin'].startswith('ModularForm/GL2/Q/holomorphic/') for elt in [x,y]):
+        # The Lhash is different, so they must differ
+        assert x['origin'] != y['origin']
+        assert not invariants_compare(x, y)
+        return False
     if x['trace_hash'] is not None and y['trace_hash'] is not None:
         if x['trace_hash'] == y['trace_hash']:
             assert invariants_compare(x,y), "%s\n%s\n" % (x, y)
@@ -84,6 +91,7 @@ def hash_compare(x,y):
         else:
             return False
     return None
+
 
 def invariants_compare(x, y):
     if x['primitive'] != y['primitive']:
