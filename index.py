@@ -153,7 +153,8 @@ def run(inputfilename, outputfilename):
                     continue
                 if i == 2 and line.startswith('bigint|'):
                     TYPES = line.strip().split('|')
-                if i == 3 and not line:
+                    continue
+                if i == 3 and line == '\n':
                     continue
 
                 L = process_line(line, HEADER, TYPES)
