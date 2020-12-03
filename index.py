@@ -25,26 +25,33 @@ class LmfdbRealLiteral(RealLiteral):
     def __repr__(self):
         return self.literal
 def load(x, H, T):
-    if x == r'\N':
-        return None
-    elif T == "text":
-        return x
-    elif T == "boolean":
-        return True if x == "t" else False
-    elif T in ["bigint", "smallint"] or H == "conductor":
-        return ZZ(x)
-    elif T in ["bigint[]", "smallint[]"]:
-        return [ZZ(a) for a in x[1:-1].split(",") if a]
-    elif T == "numeric[]":
-        return [LmfdbRealLiteral(RR, a) for a in x[1:-1].split(",") if a]
-    elif T == "double precision" or H == "z1":
-        # Use LmfdbRealLiteral so that we can get the original string back
-        return LmfdbRealLiteral(RR, x)
-    elif H == "gamma_factors":
-        # we don't care about gamma factors for the index
-        return None
-    else:
-        raise RuntimeError((x, H, T))
+    try:
+        if x == r'\N':
+            return None
+        elif T == "text":
+            return x
+        elif T == "boolean":
+            return True if x == "t" else False
+        elif T in ["bigint", "smallint"] or H == "conductor":
+            return ZZ(x)
+        elif T in ["bigint[]", "smallint[]"]:
+            return [ZZ(a) for a in x[1:-1].split(",") if a]
+        elif T == "numeric[]":
+            return [LmfdbRealLiteral(RR, a) for a in x[1:-1].split(",") if a]
+        elif T == "double precision" or H == "z1":
+            # Use LmfdbRealLiteral so that we can get the original string back
+            if x == "Infinity":
+                x = "+" + x
+            return LmfdbRealLiteral(RR, x)
+        elif H == "gamma_factors":
+            # we don't care about gamma factors for the index
+            return None
+        else:
+            raise RuntimeError((x, H, T))
+    except Exception as e:
+        print(x,H,T)
+        raise e
+
 
 def process_line(line, HEADER, TYPES):
     line = line.strip()
