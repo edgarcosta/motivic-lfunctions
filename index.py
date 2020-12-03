@@ -98,7 +98,7 @@ def invariants_compare(x, y):
     # check if z1s match
     # 3 = dot, and 2 digits due to possible truncation and what not
     digits = min(len(str(elt['z1'])) for elt in [x,y]) - 3
-    if (x['z1'] - y['z1']) > 10**-digits:
+    if (x['z1'] - y['z1']).abs() > 10**-digits:
         return False
     if x['order_of_vanishing'] != y['order_of_vanishing']:
         return False
