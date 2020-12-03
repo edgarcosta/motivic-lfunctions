@@ -186,7 +186,7 @@ def run(inputfilename, outputfilename):
             else:
                 compute_index(res)
                 for r in res:
-                    W.write('%s|%d\n' % (r['line'], r['index']))
+                    W.write('%s|%s-%d|%d\n' % (r['line'], r['prelabel'], r['index'], r['index'],))
 
 
 if __name__ == "__main__":
