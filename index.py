@@ -81,8 +81,7 @@ def hash_compare(x,y):
     # as there are trace collisions for not small degree
     if all(elt['origin'].startswith('ModularForm/GL2/Q/holomorphic/') for elt in [x,y]):
         # The Lhash is different, so they must differ
-        assert x['origin'] != y['origin']
-        assert not invariants_compare(x, y)
+        assert x['origin'] != y['origin'] and not invariants_compare(x, y), "%s\n%s\n" % (x, y)
         return False
     if x['trace_hash'] is not None and y['trace_hash'] is not None:
         if x['trace_hash'] == y['trace_hash']:
