@@ -48,7 +48,7 @@ def load(x, H, T):
     else:
         raise RuntimeError((x, H, T))
 
-def process_line(line, normalized=False):
+def process_line(line, HEADER, TYPES):
     line = line.strip()
     L = {H: load(x, H, T) for (x, H, T) in zip(line.split("|"), HEADER, TYPES)}
     L['line'] = line
@@ -148,7 +148,15 @@ def run(inputfilename, outputfilename):
     with open(inputfilename) as F:
         with open(outputfilename, 'w') as W:
             for i, line in enumerate(F.readlines(),1):
-                L = process_line(line)
+                if i == 0 and line.startswith('id|'):
+                    HEADER = line.strip().split('|')
+                    continue
+                if i == 2 and line.startswith('bigint|'):
+                    TYPES = line.strip().split('|')
+                if i == 2 and not line:
+                    continue
+
+                L = process_line(line, HEADER, TYPES)
                 L['line'] = line.strip()
                 if L['prelabel'] == previouslabel:
                     res.append(L)
