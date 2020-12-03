@@ -148,7 +148,7 @@ def run(inputfilename, outputfilename):
     with open(inputfilename) as F:
         with open(outputfilename, 'w') as W:
             for i, line in enumerate(F.readlines(),1):
-                if i == 0 and line.startswith('id|'):
+                if i == 1 and line.startswith('id|'):
                     HEADER = line.strip().split('|')
                     continue
                 if i == 2 and line.startswith('bigint|'):
