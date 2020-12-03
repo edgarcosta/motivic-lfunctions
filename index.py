@@ -2,7 +2,7 @@
 import re, sys
 from six import string_types
 from collections import Counter
-from sage.all import psi, cached_function, ZZ, RR, GCD, ceil, RealField, ComplexField, CDF, walltime
+from sage.all import psi, cached_function, ZZ, RR, GCD, ceil, RealField, ComplexField, CDF, walltime, floor
 try:
     from sage.rings.complex_mpfr import ComplexNumber
 except ModuleNotFoundError:
