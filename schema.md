@@ -1,8 +1,54 @@
 
+Search table: lfunc_search
+--------------------------
 
+| Field | type | description |
+|----------|    ------     | ----- |
+origin                        |text                | url for the object that was use to generated this data
+primitive                     |boolean             | true if L-func is [primitive], we use the second moment in many instances to decide this
+conductor                     |numeric             | the [conductor] of L-func
+central_character             |text                | the label of the primitive [central character](https://beta.lmfdb.org/knowledge/show/lfunction.central_character)
+self_dual                     |boolean             | true if L-func is self-dual (coeff field is totally real)
+motivic_weight                |smallint            | the [motivic weight] of the L-func 
+Lhash                         |text                | **to remove**
+degree                        |smallint            | the [degree] of the L-func
+order_of_vanishing            |smallint            | the [analytic rank], the order of vanishing at its central point
+algebraic                     |boolean             | if the arithmetic normalized Dirichlet coefficients are algebraic numbers
+z1                            |numeric             | the [lowest zero]
+gamma_factors                 |jsonb               | **to remove**
+trace_hash                    |bigint              | linear combination of the a_p between 2^12 and 2^13 reduced mod 2^61-1 as defined in BSSVY, only for rational L-functions
+root_angle                    |double precision    | stored between -.5 to .5
+prelabel                      |text                | the label without the index
+analytic_conductor            |double precision    | the analytic conductor [analytic conductor]
+mu_real                       |smallint[]          | 
+mu_imag                       |numeric[]           |
+nu_real_doubled               |smallint[]          |
+nu_imag                       |numeric[]           |
+bad_primes                    |bigint[]            |
+label                         |text                | the [label] of the lfunc, e.g.: 3-1-1.1-r0e3-p4.23p33.33m37.56-0
+index                         |smallint            | the last component of the [label]
+conductor_radical             |integer             |
+dirichlet_coefficients        |numeric[]           |
+euler_factors                 |numeric[]           |
+rational                      |boolean             |
+euler{p}                      |numeric[]           | k = 2, 3, 5,..., 97
+root_analytic_conductor       |double precision    | the [root analytic conductor]
+instance_types                |text[]              |
+instance_urls                 |text[]              |
+spectral_label                |text                | the [spectral label], e.g. r0e3-p4.23p33.33m37.56
+is_instance_{type}            |boolean             | type in {Artin,BMF,CMF,DIR,ECNF,G2Q,HMF,MaassGL3,MaassGL4,MaassGSp4,NF}
 
-Want to have a unified table, largely cnosisting exactly of what pops out of
-Andy's code.
+[label]: https://beta.lmfdb.org/knowledge/show/lfunction.label
+[spectral label]: https://beta.lmfdb.org/knowledge/show/lfunction.spectral_label
+[analytic rank]: https://beta.lmfdb.org/knowledge/show/lfunction.analytic_rank
+[lowest zero]: https://beta.lmfdb.org/knowledge/show/lfunction.zeros
+[degree]: https://beta.lmfdb.org/knowledge/show/lfunction.degree
+[primitive]: https://beta.lmfdb.org/knowledge/show/lfunction.primitive
+[conductor]: https://beta.lmfdb.org/knowledge/show/lfunction.conductor
+[motivic weight]: https://beta.lmfdb.org/knowledge/show/lfunction.motivic_weight
+[analytic conductor]: https://beta.lmfdb.org/knowledge/show/lfunction.analytic_conductor
+[root analytic conductor]: https://beta.lmfdb.org/knowledge/show/lfunction.roo_analytic_conductor
+
 
 NOTE: All s, mu, nu, etc. values are in the analytic normalization.
 
