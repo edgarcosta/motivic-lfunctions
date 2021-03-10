@@ -13,25 +13,26 @@ motivic_weight                |smallint            | the [motivic weight] of the
 Lhash                         |text                | **to remove**
 degree                        |smallint            | the [degree] of the L-func
 order_of_vanishing            |smallint            | the [analytic rank], the order of vanishing at its central point
-algebraic                     |boolean             | if the arithmetic normalized Dirichlet coefficients are algebraic numbers
+algebraic                     |boolean             | if the L-func is [arithmetic], i.e. normalized Dirichlet coefficients are algebraic numbers, conjecturally this is the same as being algebraic
 z1                            |numeric             | the [lowest zero]
 gamma_factors                 |jsonb               | **to remove**
 trace_hash                    |bigint              | linear combination of the a_p between 2^12 and 2^13 reduced mod 2^61-1 as defined in BSSVY, only for rational L-functions
 root_angle                    |double precision    | stored between -.5 to .5
 prelabel                      |text                | the label without the index
 analytic_conductor            |double precision    | the analytic conductor [analytic conductor]
-mu_real                       |smallint[]          | 
-mu_imag                       |numeric[]           |
-nu_real_doubled               |smallint[]          |
-nu_imag                       |numeric[]           |
-bad_primes                    |bigint[]            |
+mu_real                       |smallint[]          | the real part (in [0, 1]) of mus in the analytic normalization the [functional equation], where if possible Gamma_R factors have been converted to Gamma_C
+mu_imag                       |numeric[]           | the imaginary part of mus in the analytic normalization the [functional equation], where if possible Gamma_R factors have been converted to Gamma_C
+nu_real_doubled               |smallint[]          | the real part of mus in the analytic normalization the [functional equation], where if possible Gamma_R factors have been converted to Gamma_C
+nu_imag                       |numeric[]           | the imaginary part of mus in the analytic normalization the [functional equation], where if possible Gamma_R factors have been converted to Gamma_C
+bad_primes                    |bigint[]            | primes dividing the [conductor]
 label                         |text                | the [label] of the lfunc, e.g.: 3-1-1.1-r0e3-p4.23p33.33m37.56-0
 index                         |smallint            | the last component of the [label]
-conductor_radical             |integer             |
-dirichlet_coefficients        |numeric[]           |
-euler_factors                 |numeric[]           |
-rational                      |boolean             |
-euler{p}                      |numeric[]           | k = 2, 3, 5,..., 97
+conductor_radical             |integer             | product of the bad_primes, i.e., the primes dividing the [conductor]
+dirichlet_coefficients        |numeric[]           | the [Dirichlet coefficients] for rational L-functions in arithmetic normalisation starting with a_1
+
+euler_factors                 |numeric[]           | **to remove??**
+rational                      |boolean             | if the L-func is [algebraic]
+euler{p}                      |numeric[]           | arrays of length degree + 1 representing the [euler factors] for p = 2, 3, 5,..., 97
 root_analytic_conductor       |double precision    | the [root analytic conductor]
 instance_types                |text[]              |
 instance_urls                 |text[]              |
@@ -48,6 +49,9 @@ is_instance_{type}            |boolean             | type in {Artin,BMF,CMF,DIR,
 [motivic weight]: https://beta.lmfdb.org/knowledge/show/lfunction.motivic_weight
 [analytic conductor]: https://beta.lmfdb.org/knowledge/show/lfunction.analytic_conductor
 [root analytic conductor]: https://beta.lmfdb.org/knowledge/show/lfunction.roo_analytic_conductor
+[functional equation]: https://beta.lmfdb.org/knowledge/show/lfunction.functional_equation
+[euler factors]: https://beta.lmfdb.org/knowledge/show/lfunction.euler_product
+[arithmetic]: https://beta.lmfdb.org/knowledge/show/lfunction.arithmetic
 
 
 NOTE: All s, mu, nu, etc. values are in the analytic normalization.
