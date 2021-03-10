@@ -29,13 +29,12 @@ label                         |text                | the [label] of the lfunc, e
 index                         |smallint            | the last component of the [label]
 conductor_radical             |integer             | product of the bad_primes, i.e., the primes dividing the [conductor]
 dirichlet_coefficients        |numeric[]           | the [Dirichlet coefficients] for rational L-functions in arithmetic normalisation starting with a_1
-
 euler_factors                 |numeric[]           | **to remove??**
 rational                      |boolean             | if the L-func is [algebraic]
 euler{p}                      |numeric[]           | arrays of length degree + 1 representing the [euler factors] for p = 2, 3, 5,..., 97
 root_analytic_conductor       |double precision    | the [root analytic conductor]
-instance_types                |text[]              |
-instance_urls                 |text[]              |
+instance_types                |text[]              | representing the keys of the multimap url(type) -> url(instance)
+instance_urls                 |text[]              | representing the values of the multimap url(type) -> url(instance)
 spectral_label                |text                | the [spectral label], e.g. r0e3-p4.23p33.33m37.56
 is_instance_{type}            |boolean             | type in {Artin,BMF,CMF,DIR,ECNF,G2Q,HMF,MaassGL3,MaassGL4,MaassGSp4,NF}
 
