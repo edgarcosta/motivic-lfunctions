@@ -97,6 +97,7 @@ poles                         |double precision[]  | location of the poles in ar
 
 
 
+[Dirichlet coefficient]: https://beta.lmfdb.org/knowledge/show/lfunction.dirichlet_series
 [analytic conductor]: https://beta.lmfdb.org/knowledge/show/lfunction.analytic_conductor
 [analytic rank]: https://beta.lmfdb.org/knowledge/show/lfunction.analytic_rank
 [arithmetic]: https://beta.lmfdb.org/knowledge/show/lfunction.arithmetic
