@@ -7,13 +7,13 @@ Search table: lfunc_search
 origin                        |text                | **to be removed**
 primitive                     |boolean             | true if L-func is [primitive], we use the second moment in many instances to decide this
 conductor                     |numeric             | the [conductor] of the L-func
-central_character             |text                | the contrey label of the primitive [central character]
+central_character             |text                | the conrey label of the primitive [central character]
 self_dual                     |boolean             | true if L-func is self-dual (coeff field is totally real)
 motivic_weight                |smallint            | the [motivic weight] of the L-func
 Lhash                         |text                | **to be removed**
 degree                        |smallint            | the [degree] of the L-func
 order_of_vanishing            |smallint            | the [analytic rank], the order of vanishing at its central point
-algebraic                     |boolean             | if the L-func is [arithmetic], i.e. normalized Dirichlet coefficients are algebraic numbers, conjecturally this is the same as being algebraic
+algebraic                     |boolean             | if the L-func is [arithmetic], i.e. normalized [Dirichlet coefficients] are algebraic numbers, conjecturally this is the same as being algebraic
 z1                            |numeric             | the [lowest zero]
 gamma_factors                 |jsonb               | **to be removed**
 trace_hash                    |bigint              | linear combination of the a_p between 2^12 and 2^13 reduced mod 2^61-1 as defined in Section 4.3 of [BSSVY](https://arxiv.org/abs/1602.03715), only for rational L-functions
@@ -22,15 +22,15 @@ prelabel                      |text                | the label without the index
 analytic_conductor            |double precision    | the analytic conductor [analytic conductor]
 mu_real                       |smallint[]          | the real part (in [0, 1]) of mus in the analytic normalization the [functional equation], where if possible Gamma_R factors have been converted to Gamma_C
 mu_imag                       |numeric[]           | the imaginary part of mus in the analytic normalization the [functional equation], where if possible Gamma_R factors have been converted to Gamma_C
-nu_real_doubled               |smallint[]          | the real part of mus in the analytic normalization the [functional equation], where if possible Gamma_R factors have been converted to Gamma_C
-nu_imag                       |numeric[]           | the imaginary part of mus in the analytic normalization the [functional equation], where if possible Gamma_R factors have been converted to Gamma_C
+nu_real_doubled               |smallint[]          | the real part of nus doubled, so they are integers, in the analytic normalization the [functional equation], where if possible Gamma_R factors have been converted to Gamma_C
+nu_imag                       |numeric[]           | the imaginary part of nus in the analytic normalization the [functional equation], where if possible Gamma_R factors have been converted to Gamma_C
 bad_primes                    |bigint[]            | primes dividing the [conductor]
 label                         |text                | the [label] of the lfunc, e.g.: 3-1-1.1-r0e3-p4.23p33.33m37.56-0
 index                         |smallint            | the last component of the [label]
-conductor_radical             |integer             | product of the bad_primes, i.e., the primes dividing the [conductor]
+conductor_radical             |bigint              | product of the bad_primes, i.e., the primes dividing the [conductor]
 dirichlet_coefficients        |numeric[]           | the [Dirichlet coefficients] for rational L-functions in arithmetic normalisation starting with a_1
 euler_factors                 |numeric[]           | **to be removed??**
-rational                      |boolean             | if the L-func is [algebraic]
+rational                      |boolean             | if the [Dirichlet coefficients] in arithmetic normalisation are rational
 euler{p}                      |numeric[]           | arrays of length degree + 1 representing the [euler factors] for p = 2, 3, 5,..., 97
 root_analytic_conductor       |double precision    | the [root analytic conductor]
 instance_types                |text[]              | representing the keys of the multimap url(type) -> url(instance)
@@ -57,7 +57,7 @@ conductor_radical             |integer             | ^
 conjugate                     |text                | the [label] of the conjugate L-function, if self dual then None
 degree                        |smallint            | ^
 euler_factors                 |jsonb               | the first [euler factors] stored as array of lists, if the L-func is not rational, we represent each coefficient as pair of doubles corresponding to the real, imaginary pair. We need jsonb to be able to handle
-euler_factors_factorization   |jsonb               | if the L-func is rational and the degree is large enough we store the factorsation of the euler_factors
+euler_factors_factorization   |jsonb               | if the L-func is rational and the degree is larger than (???) we store the factorsation of the euler_factors
 factors                       |text[]              | an array with the labels of the primitive factors (potentially repeated), where the last entry will be Null if we don't know the full factorization
 gamma_factors                 |jsonb               | **FIXME**
 index                         |smallint            | the last component of the label
@@ -109,7 +109,7 @@ poles                         |double precision[]  | location of the poles in ar
 [lowest zero]: https://beta.lmfdb.org/knowledge/show/lfunction.zeros
 [motivic weight]: https://beta.lmfdb.org/knowledge/show/lfunction.motivic_weight
 [primitive]: https://beta.lmfdb.org/knowledge/show/lfunction.primitive
-[root analytic conductor]: https://beta.lmfdb.org/knowledge/show/lfunction.roo_analytic_conductor
+[root analytic conductor]: https://beta.lmfdb.org/knowledge/show/lfunction.root_analytic_conductor
 [root number]: https://beta.lmfdb.org/knowledge/show/lfunction.sign
 [spectral label]: https://beta.lmfdb.org/knowledge/show/lfunction.spectral_label
 
