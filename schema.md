@@ -43,7 +43,8 @@ is_instance_{type}            |boolean             | type in {Artin,BMF,CMF,DIR,
 
 
 
-lfunc_search
+Data table: lfunc_table
+-----------------------
 ____________
 | Field | type | description |
 |----------|    ------     | ----- |
