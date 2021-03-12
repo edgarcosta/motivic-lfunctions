@@ -56,10 +56,10 @@ conductor                     |numeric             | ^
 conductor_radical             |integer             | ^
 conjugate                     |text                | the [label] of the conjugate L-function, if self dual then None
 degree                        |smallint            | ^
-euler_factors                 |jsonb               | the first [euler factors] stored as array of lists, if the L-func is not rational, we represent each coefficient as pair of doubles corresponding to the real, imaginary pair. We need jsonb to be able to handle 
+euler_factors                 |jsonb               | the first [euler factors] stored as array of lists, if the L-func is not rational, we represent each coefficient as pair of doubles corresponding to the real, imaginary pair. We need jsonb to be able to handle
 euler_factors_factorization   |jsonb               | if the L-func is rational and the degree is large enough we store the factorsation of the euler_factors
 factors                       |text[]              | an array with the labels of the primitive factors (potentially repeated), where the last entry will be Null if we don't know the full factorization
-gamma_factors                 |jsonb               | FIXME
+gamma_factors                 |jsonb               | **FIXME**
 index                         |smallint            | the last component of the label
 instance_types                |text[]              | ^
 instance_urls                 |text[]              | ^
@@ -72,7 +72,7 @@ mu_imag                       |numeric[]           | ^
 mu_real                       |smallint[]          | ^
 nu_imag                       |numeric[]           | ^
 nu_real_doubled               |smallint[]          | ^
-order_of_vanishing            |smallint            | an LMFDB url from which we have derived this data
+order_of_vanishing            |smallint            | ^
 origin                        |text                | url for the object that was use to generated this data
 plot_delta                    |float               | the spacing of the plot_values
 plot_values                   |float[]             | the values of the Z function spaced by plot_delta, i.e., plot_values = [Z(k*plot_delta) for k in range(len(plot_delta))]
