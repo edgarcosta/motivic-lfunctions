@@ -8,7 +8,9 @@ We are aiming at
 
 # Elliptic Curves
 
-For every elliptic curve in the database we will have the L-function of Sym^d E if d <= 8 and Conductor(Sym^d E) <= 1e9
+For every elliptic curve in the database we will have the L-function of Sym^d E if d <= 8 and Conductor(Sym^d E) <= 1e9.
+This gives about ~ 4 million L-functions.
+
 ```
 N <= 10^9 total: 4113861
      d    total
