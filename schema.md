@@ -10,12 +10,10 @@ conductor                     |numeric             | the [conductor] of the L-fu
 central_character             |text                | the conrey label of the primitive [central character]
 self_dual                     |boolean             | true if L-func is self-dual (coeff field is totally real)
 motivic_weight                |smallint            | the [motivic weight] of the L-func
-Lhash                         |text                | **to be removed**
 degree                        |smallint            | the [degree] of the L-func
 order_of_vanishing            |smallint            | the [analytic rank], the order of vanishing at its central point
 algebraic                     |boolean             | if the L-func is [arithmetic], i.e. normalized [Dirichlet coefficients] are algebraic numbers, conjecturally this is the same as being algebraic
 z1                            |numeric             | the [lowest zero]
-gamma_factors                 |jsonb               | **to be removed**
 trace_hash                    |bigint              | linear combination of the a_p between 2^12 and 2^13 reduced mod 2^61-1 as defined in Section 4.3 of [BSSVY](https://arxiv.org/abs/1602.03715), only for rational L-functions
 root_angle                    |double precision    | the argument of [root number] normalized between -.5 to .5
 prelabel                      |text                | the label without the index
@@ -36,7 +34,7 @@ root_analytic_conductor       |double precision    | the [root analytic conducto
 instance_types                |text[]              | representing the keys of the multimap url(type) -> url(instance)
 instance_urls                 |text[]              | representing the values of the multimap url(type) -> url(instance)
 spectral_label                |text                | the [spectral label], e.g. r0e3-p4.23p33.33m37.56
-is_instance_{type}            |boolean             | type in {Artin,BMF,CMF,DIR,ECNF,G2Q,HMF,MaassGL3,MaassGL4,MaassGSp4,NF}
+is_instance_{type}            |boolean             | type in {Artin,BMF,CMF,DIR,ECQ,ECQSymPower,ECNF,G2Q,HMF,MaassGL3,MaassGL4,MaassGSp4,NF}
 
 
 
@@ -54,18 +52,17 @@ bad_lfactors                  |jsonb               | euler factors for the bad p
 bad_primes                    |bigint[]            | ^
 central_character             |text                | ^
 conductor                     |numeric             | ^
-conductor_radical             |integer             | ^
+conductor_radical             |bigint              | ^
 conjugate                     |text                | the [label] of the conjugate L-function, if self dual then None
 degree                        |smallint            | ^
 euler_factors                 |jsonb               | the first [euler factors] stored as array of lists, if the L-func is not rational, we represent each coefficient as pair of doubles corresponding to the real, imaginary pair. We need jsonb to be able to handle
-euler_factors_factorization   |jsonb               | if the L-func is rational and the degree is larger than (???) we store the factorsation of the euler_factors
+euler_factors_factorization   |jsonb               | if the L-func is rational of degree larger than 4, we store the factorisation of the euler_factors
 factors                       |text[]              | an array with the labels of the primitive factors (potentially repeated), where the last entry will be Null if we don't know the full factorization
-gamma_factors                 |jsonb               | **FIXME**
 index                         |smallint            | the last component of the label
 instance_types                |text[]              | ^
 instance_urls                 |text[]              | ^
 label                         |text                | ^
-leading_term_mid              |numeric             | the mid point of the leading term of the Taylor expansion of the L-function centered at t = 0 on the critical line 
+leading_term_mid              |numeric             | the mid point of the leading term of the Taylor expansion of the L-function centered at t = 0 on the critical line
 leaving_term_rad              |real                | the radious point of the leading term of the Taylor expansion of the L-function centered at t = 0 on the critical line
 load_key                      |text                | a string marking the upload
 motivic_weight                |smallint            | ^
@@ -75,8 +72,8 @@ nu_imag                       |numeric[]           | ^
 nu_real_doubled               |smallint[]          | ^
 order_of_vanishing            |smallint            | ^
 origin                        |text                | url for the object that was use to generated this data
-plot_delta                    |float               | the spacing of the plot_values
-plot_values                   |float[]             | the values of the Z function spaced by plot_delta, i.e., plot_values = [Z(k*plot_delta) for k in range(len(plot_delta))]
+plot_delta                    |float4              | the spacing of the plot_values
+plot_values                   |float4[]            | the values of the Z function spaced by plot_delta, i.e., plot_values = [Z(k*plot_delta) for k in range(len(plot_delta))]
 positive_zeros_mid            |numeric[]           | the midpoint of the first zeros, at most 10, represented as a ball
 positive_zeros_rad            |double precision[]  | the radius of the first zeros, at most 10, represented as a ball
 positive_zeros_extra          |double precision[]  | the remaining zeros via their correct double approximation
@@ -116,3 +113,4 @@ poles                         |double precision[]  | location of the poles in ar
 [spectral label]: https://beta.lmfdb.org/knowledge/show/lfunction.spectral_label
 
 
+TODO: add column is_instance_ECQSymPower
