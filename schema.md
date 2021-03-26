@@ -7,8 +7,8 @@ Search table: lfunc_search
 origin                        |text                | **to be removed**
 primitive                     |boolean             | true if L-func is [primitive], we use the second moment in many instances to decide this
 conductor                     |numeric             | the [conductor] of the L-func
-central_character             |text                | the conrey label of the primitive [central character]
-self_dual                     |boolean             | true if L-func is self-dual (coeff field is totally real)
+central_character             |text                | the conrey label of the primitive character that induces the [central character] of modulus equal the conductor
+self_dual                     |boolean             | true if L-func is self-dual, i.e., all Dirichlet coefficients are real
 motivic_weight                |smallint            | the [motivic weight] of the L-func
 degree                        |smallint            | the [degree] of the L-func
 order_of_vanishing            |smallint            | the [analytic rank], the order of vanishing at its central point
@@ -17,7 +17,7 @@ z1                            |numeric             | the [lowest zero]
 trace_hash                    |bigint              | linear combination of the a_p between 2^12 and 2^13 reduced mod 2^61-1 as defined in Section 4.3 of [BSSVY](https://arxiv.org/abs/1602.03715), only for rational L-functions
 root_angle                    |double precision    | the argument of [root number] normalized between -.5 to .5
 prelabel                      |text                | the label without the index
-analytic_conductor            |double precision    | the analytic conductor [analytic conductor]
+analytic_conductor            |double precision    | the [analytic conductor]
 mu_real                       |smallint[]          | the real part (in [0, 1]) of mus in the analytic normalization the [functional equation], where if possible Gamma_R factors have been converted to Gamma_C
 mu_imag                       |numeric[]           | the imaginary part of mus in the analytic normalization the [functional equation], where if possible Gamma_R factors have been converted to Gamma_C
 nu_real_doubled               |smallint[]          | the real part of nus doubled, so they are integers, in the analytic normalization the [functional equation], where if possible Gamma_R factors have been converted to Gamma_C
@@ -75,7 +75,7 @@ origin                        |text                | url for the object that was
 plot_delta                    |float4              | the spacing of the plot_values
 plot_values                   |float4[]            | the values of the Z function spaced by plot_delta, i.e., plot_values = [Z(k*plot_delta) for k in range(len(plot_delta))]
 positive_zeros_mid            |numeric[]           | the midpoint of the first zeros, at most 10, represented as a ball
-positive_zeros_rad            |double precision[]  | the radius of the first zeros, at most 10, represented as a ball
+positive_zeros_rad            |double precision[]  | the radious of the first zeros, at most 10, represented as a ball
 positive_zeros_extra          |double precision[]  | the remaining zeros via their correct double approximation
 prelabel                      |text                | ^
 primitive                     |boolean             | ^
@@ -85,10 +85,10 @@ root_angle                    |double precision    | ^
 self_dual                     |boolean             | ^
 special_values_at             |double precision[]  | an array of t's where L(t) has been computed as a ball, t is in analytic normalization
 special_values_mid            |numeric[]           | the mid point of L(t)
-special_values_rad            |real[]              | the radius of L(t)
+special_values_rad            |real[]              | the radious of L(t)
 spectral_label                |text                | ^
 root_angle_mid                |numeric             | the mid point of the argument of [root number] normalized between -.5 to .5
-root_angle_rad                |real                | the radius point of the argument of [root number] normalized between -.5 to .5
+root_angle_rad                |real                | the radious point of the argument of [root number] normalized between -.5 to .5
 trace_hash                    |bigint              | ^
 z1                            |numeric             | the first zero where all the last digit may have an error of +-1, e.g., we could represent pi as 3.1416
 poles                         |double precision[]  | location of the poles in arithmetic normalization
