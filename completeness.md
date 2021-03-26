@@ -6,6 +6,8 @@
 We are aiming at
 (conductor <= 1000 or (conductor <= 10000 and phi(order) <= 47)) ~ 4 million
 
+Where the second clause guarantees that we get every Dirichlet character showing up as a factor in a desired Dedekin zeta function.
+
 # Elliptic Curves
 
 For every elliptic curve in the database we will have the L-function of Sym^d E if d <= 8 and Conductor(Sym^d E) <= 1e9.
