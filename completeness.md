@@ -1,7 +1,7 @@
 # Artin Representations
 ?
 
-# Dirichelet Characters
+# Dirichlet Characters
 
 We are aiming at
 (conductor <= 1000 or (conductor <= 10000 and phi(order) <= 47)) ~ 4 million
