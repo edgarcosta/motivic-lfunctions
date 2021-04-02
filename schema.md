@@ -113,4 +113,7 @@ poles                         |double precision[]  | location of the poles in ar
 [spectral label]: https://beta.lmfdb.org/knowledge/show/lfunction.spectral_label
 
 
-TODO: add column is_instance_ECQSymPower
+TODO:
+- add column is_instance_ECQSymPower
+- central_character -> central_character_prim
+
