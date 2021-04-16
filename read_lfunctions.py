@@ -1750,7 +1750,7 @@ class lfunction_collection:
 
 
 
-    def export(self, lfunctions_filename, instances_filename, overwrite=False):
+    def export(self, lfunctions_filename, instances_filename, overwrite=False, save_memory=False):
         if not overwrite and (os.path.exists(lfunctions_filename) or os.path.exists(instances_filename)):
             raise ValueError("Files already exist")
 
@@ -1774,9 +1774,11 @@ class lfunction_collection:
                 F.write("\n\n")
                 ct = 0
                 for prelabel, objs in self.lfunctions.items():
+                    ct += len(objs)
                     for elt in objs:
-                        ct += 1
                         F.write(sep.join(json_dumps(getattr(elt, col), self.lfunctions_schema[col]) for col in lfunctions_cols))
+                    if save_memory:
+                        objs.clear()
                     if time.time() - current > 1: # slow down the updates
                         spinner.text = info + progress_bar(ct, self.total, time.time() - start_time)
                         current = time.time()
@@ -1895,7 +1897,7 @@ if __name__ == "__main__":
     R = class_name(load_key=load_key)
     L = lfunction_collection()
     L.populate(R.read_files(fn_in, fn_out))
-    L.export(fn_lfun, fn_ins, True)
+    L.export(fn_lfun, fn_ins, True, True)
 
 
 
