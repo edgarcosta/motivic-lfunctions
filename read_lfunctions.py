@@ -3,7 +3,8 @@ import time
 import json
 import os
 import sys
-from collections import Counter, defaultdict
+import multiprocessing
+from collections import Counter, defaultdict, OrderedDict
 from collections.abc import Iterable
 from sage.all import (
     CDF,
@@ -34,6 +35,7 @@ from sage.all import (
     log,
     magma,
     next_prime,
+    parallel,
     prime_powers,
     prime_range,
     primes_first_n,
@@ -1496,6 +1498,8 @@ class smalljac(lfunction_element):
 #                res.append(((1,k.sqrt()),) + elt)
 #    return res
 
+
+
 class artin(lfunction_element):
     def __init__(self):
         raise NotImplementedError
@@ -1503,6 +1507,9 @@ class artin(lfunction_element):
 class artin_orbit(artin):
     def __init__(self):
         raise NotImplementedError
+
+
+ncpus = multiprocessing.cpu_count()//2
 
 class lfunction_collection:
     @lazy_class_attribute
@@ -1513,6 +1520,9 @@ class lfunction_collection:
     @lazy_class_attribute
     def tables(cls):
         return [cls.db.lfunc_lfunctions, cls.db.lfunc_data]
+
+
+
 
     @classmethod
     def dbsearch(cls, query, projection):
@@ -1535,13 +1545,13 @@ class lfunction_collection:
 
     @lazy_class_attribute
     def lfunctions_schema(cls):
-        sch = dict(cls.db.lfunc_data.col_type)
+        sch = OrderedDict(cls.db.lfunc_data.col_type)
         sch.pop('id')
         return sch
 
     @lazy_class_attribute
     def instances_schema(cls):
-        sch = dict(cls.db.lfunc_instances.col_type)
+        sch = OrderedDict(cls.db.lfunc_instances.col_type)
         sch.pop('id')
         return sch
 
@@ -1597,7 +1607,7 @@ class lfunction_collection:
     @staticmethod
     def chunkify(l, size=100):
         res = [list(l)[elt*size:(elt + 1)*size] for elt in range(len(l)//size + 1)]
-        assert len(l) == sum(map(len, res))
+        #assert len(l) == sum(map(len, res))
         return res
 
 
@@ -1747,6 +1757,15 @@ class lfunction_collection:
                 spinner.text = info + progress_bar(ct, total, time.time() - start_time)
             spinner.succeed('New lfun_instances rows computed in %.2fs' % (time.time() - start_time,))
 
+    @parallel(ncpus=ncpus)
+    def lfunctions_lines_prelabels(self, prelabels):
+        return '\n'.join(
+            '\n'.join(
+                self.sep.join(
+                    json_dumps(getattr(elt, col), typ)
+                    for col, typ in self.lfunctions_schema.items())
+                for elt in self.lfunctions[prelabel])
+            for prelabel in prelabels)
 
 
 
@@ -1773,15 +1792,17 @@ class lfunction_collection:
                 F.write(sep.join([self.lfunctions_schema[col] for col in lfunctions_cols]))
                 F.write("\n\n")
                 ct = 0
-                for prelabel, objs in self.lfunctions.items():
-                    ct += len(objs)
-                    for elt in objs:
-                        F.write(sep.join(json_dumps(getattr(elt, col), self.lfunctions_schema[col]) for col in lfunctions_cols))
+                for chunks in self.chunkify(self.chunkify(self.lfunctions, size=ncpus)):
+                    prelabels = sum(chunks, [])
+                    for _, out in self.lfunctions_lines_prelabels(chunks):
+                        if out:
+                            F.write(out + '\n')
                     if save_memory:
-                        objs.clear()
-                    if time.time() - current > 1: # slow down the updates
-                        spinner.text = info + progress_bar(ct, self.total, time.time() - start_time)
-                        current = time.time()
+                        ctsum = lambda elt: len(self.lfunctions.pop(elt))
+                    else:
+                        ctsum = lambda elt: len(self.lfunctions[elt])
+                    ct = sum(map(ctsum, prelabels))
+                    spinner.text = info + progress_bar(ct, self.total, time.time() - start_time)
 
             spinner.succeed("Wrote %s in %.2f seconds" % (lfunctions_filename, time.time() - start_time))
 
@@ -1798,6 +1819,7 @@ class lfunction_collection:
                 for ct, elt in enumerate(self.instances, 1):
                     # these are dictionaries
                     F.write(sep.join(json_dumps(elt.get(col), self.instances_schema[col]) for col in instances_cols))
+                    F.write('\n')
                     if time.time() - current > 1: # slow down the updates
                         spinner.text = info + progress_bar(ct, total, time.time() - start_time)
                         current = time.time()
