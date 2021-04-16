@@ -52,6 +52,7 @@ import re
 from dirichlet_conrey import DirichletGroup_conrey, DirichletCharacter_conrey
 from sage.structure.unique_representation import CachedRepresentation
 from halo import Halo
+from itertools import islice
 
 
 mod1 = lambda elt: RDF(elt) - RDF(elt).floor()
@@ -1262,7 +1263,7 @@ class read_smalljac(read_lfunctions):
         # pin down root_number
         assert res['root_number_acb'].contains_integer()
         res['root_number_acb'] = self.CBF(Integer(res['root_number_acb']))
-        assert res['root_number_acb']  in [1, -1]
+        assert res['root_number_acb'] in [1, -1]
         res['root_angle'] = 0 if res['root_number_acb'] == 1 else 0.5
 
 
@@ -1545,15 +1546,13 @@ class lfunction_collection:
 
     @lazy_class_attribute
     def lfunctions_schema(cls):
-        sch = OrderedDict(cls.db.lfunc_data.col_type)
-        sch.pop('id')
-        return sch
+        return OrderedDict((k, cls.db.lfunc_data.col_type[k])
+                           for k in sorted(cls.db.lfunc_data.col_type[k]) if k != 'id')
 
     @lazy_class_attribute
     def instances_schema(cls):
-        sch = OrderedDict(cls.db.lfunc_instances.col_type)
-        sch.pop('id')
-        return sch
+        return OrderedDict((k, cls.db.lfunc_instances.col_type[k])
+                           for k in sorted(cls.db.lfunc_instances.col_type[k]) if k != 'id')
 
 
     def __init__(self, sep=':'):
@@ -1575,7 +1574,7 @@ class lfunction_collection:
             for i, elt in enumerate(iterator, 1):
                 self.lfunctions[elt.prelabel].append(elt)
                 if time.time() - current > 2:
-                    rate = i/(time.time() - current)
+                    rate = i/(time.time() - start_time)
                     spinner.text = 'Loading collection: %.2f lines/second' % rate
                     current = time.time()
             old_total = self.total
@@ -1611,9 +1610,7 @@ class lfunction_collection:
 
     @staticmethod
     def chunkify(l, size=100):
-        res = [list(l)[elt*size:(elt + 1)*size] for elt in range(len(l)//size + 1)]
-        #assert len(l) == sum(map(len, res))
-        return res
+        return [islice(l, elt*size, (elt + 1)*size) for elt in range(len(l)//size + 1)]
 
 
     def _populate_label(self):
@@ -1630,7 +1627,7 @@ class lfunction_collection:
                 db_data = {elt: [] for elt in chunk}
                 #spinner.text = info + ': loading data from LMFDB'
                 for l in self.dbsearch(
-                    {'prelabel': {'$in': chunk}, 'label': {'$exists': True}},
+                    {'prelabel': {'$in': list(chunk)}, 'label': {'$exists': True}},
                         projection=lfunction_element.projection + ['origin', 'instance_types', 'instance_urls']):
                     db_data[l['prelabel']].append(l)
                 for prelabel, objs in db_data.items():
@@ -1737,7 +1734,7 @@ class lfunction_collection:
             start_time = time.time()
             self.instances = []
             lfunctions_dict = {elt.label: elt for objs in self.lfunctions.values() for elt in objs}
-            label_chunks = self.chunkify(list(lfunctions_dict))
+            label_chunks = self.chunkify(lfunctions_dict)
             total = len(label_chunks)
             for chunk in label_chunks:
                 ct += 1
