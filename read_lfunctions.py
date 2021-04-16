@@ -1575,7 +1575,7 @@ class lfunction_collection:
                 self.lfunctions[elt.prelabel].append(elt)
                 if time.time() - current > 1:
                     rate = i/(time.time() - current)
-                    spinner.text = 'Loading collection: %.2f lines/second'
+                    spinner.text = 'Loading collection: %.2f lines/second' % rate
             old_total = self.total
             self.total = sum(map(len, self.lfunctions.values()))
             spinner.succeed('%d new L-functions loaded in %.2f seconds' % (self.total - old_total, time.time() - start_time))
