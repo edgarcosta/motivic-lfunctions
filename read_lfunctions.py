@@ -1570,9 +1570,12 @@ class lfunction_collection:
 
     def populate(self, iterator):
         with Halo(text='Loading collection', spinner='dots') as spinner:
-            start_time = time.time()
-            for elt in iterator:
+            current = start_time = time.time()
+            for i, elt in enumerate(iterator, 1):
                 self.lfunctions[elt.prelabel].append(elt)
+                if time.time() - current > 1:
+                    rate = i/(time.time() - current)
+                    spinner.text = 'Loading collection: %.2f lines/second'
             old_total = self.total
             self.total = sum(map(len, self.lfunctions.values()))
             spinner.succeed('%d new L-functions loaded in %.2f seconds' % (self.total - old_total, time.time() - start_time))
@@ -1794,8 +1797,7 @@ class lfunction_collection:
                 ct = 0
                 # this is where most of the work happens and thus worth to parallelize
                 # the data generation
-                for chunks in self.chunkify(self.chunkify(self.lfunctions, size=ncpus)):
-                    prelabels = sum(chunks, [])
+                for chunks in self.chunkify(self.chunkify(self.lfunctions), size=ncpus):
                     for _, out in self.lfunctions_lines_prelabels(chunks):
                         if out:
                             F.write(out + '\n')
@@ -1803,7 +1805,7 @@ class lfunction_collection:
                         ctsum = lambda elt: len(self.lfunctions.pop(elt))
                     else:
                         ctsum = lambda elt: len(self.lfunctions[elt])
-                    ct = sum(map(ctsum, prelabels))
+                    ct += sum(map(ctsum, sum(chunks, [])))
                     spinner.text = info + progress_bar(ct, self.total, time.time() - start_time)
 
             spinner.succeed("Wrote %s in %.2f seconds" % (lfunctions_filename, time.time() - start_time))
