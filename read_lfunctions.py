@@ -67,10 +67,10 @@ def progress_bar(current, total, time, barLength = 20):
         eta = '%.2f' % (time*(total-current)/float(current),)
     else:
         eta = '+oo'
-    arrow   = '█' * int(percent/100 * barLength - 1)
-    spaces  = '░' * (barLength - len(arrow))
+    done   = '█' * int(percent/100 * barLength)
+    notdone  = '░' * (barLength - len(done))
 
-    return ' Progress: [%s%s] %.2f%% ETA: %s seconds' % (arrow, spaces, percent, eta)
+    return ' Progress: [%s%s] %.2f%% ETA: %s seconds' % (done, notdone, percent, eta)
 
 
 
@@ -1569,13 +1569,15 @@ class lfunction_collection:
 
 
     def populate(self, iterator):
-        with Halo(text='Loading collection', spinner='dots') as spinner:
+        # this is IO limited
+        with Halo(text='Loading collection', spinner='dots', interval=320) as spinner:
             current = start_time = time.time()
             for i, elt in enumerate(iterator, 1):
                 self.lfunctions[elt.prelabel].append(elt)
-                if time.time() - current > 1:
+                if time.time() - current > 2:
                     rate = i/(time.time() - current)
                     spinner.text = 'Loading collection: %.2f lines/second' % rate
+                    current = time.time()
             old_total = self.total
             self.total = sum(map(len, self.lfunctions.values()))
             spinner.succeed('%d new L-functions loaded in %.2f seconds' % (self.total - old_total, time.time() - start_time))
