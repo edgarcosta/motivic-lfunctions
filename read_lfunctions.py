@@ -1564,7 +1564,7 @@ class lfunction_collection:
             for elt in iterator:
                 self.lfunctions[elt.prelabel].append(elt)
             old_total = self.total
-            self.total = sum(map(len, self.lfunctions))
+            self.total = sum(map(len, self.lfunctions.values()))
             spinner.succeed('%d new L-functions loaded in %.2f seconds' % (self.total - old_total, time.time() - start_time))
 
         def remove_duplicates(objs):
@@ -1590,7 +1590,7 @@ class lfunction_collection:
                     if elt.orbit:
                         self.orbits[elt.orbit].append(elt)
             old_total = self.total
-            self.total = sum(map(len, self.lfunctions))
+            self.total = sum(map(len, self.lfunctions.values()))
             spinner.succeed('%d duplicates removed in %.2f seconds' % (old_total - self.total, time.time() - start_time))
 
 
