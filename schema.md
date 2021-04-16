@@ -63,7 +63,7 @@ instance_types                |text[]              | ^
 instance_urls                 |text[]              | ^
 label                         |text                | ^
 leading_term_mid              |numeric             | the mid point of the leading term of the Taylor expansion of the L-function centered at t = 0 on the critical line
-leaving_term_rad              |real                | the radious point of the leading term of the Taylor expansion of the L-function centered at t = 0 on the critical line
+leading_term_rad              |float8              | the radious point of the leading term of the Taylor expansion of the L-function centered at t = 0 on the critical line
 load_key                      |text                | a string marking the upload
 motivic_weight                |smallint            | ^
 mu_imag                       |numeric[]           | ^
@@ -74,24 +74,23 @@ order_of_vanishing            |smallint            | ^
 origin                        |text                | url for the object that was use to generated this data
 plot_delta                    |float4              | the spacing of the plot_values
 plot_values                   |float4[]            | the values of the Z function spaced by plot_delta, i.e., plot_values = [Z(k*plot_delta) for k in range(len(plot_delta))]
+poles                         |float8[]            | location of the poles in arithmetic normalization
 positive_zeros_mid            |numeric[]           | the midpoint of the first zeros, at most 10, represented as a ball
-positive_zeros_rad            |double precision[]  | the radious of the first zeros, at most 10, represented as a ball
-positive_zeros_extra          |double precision[]  | the remaining zeros via their correct double approximation
+positive_zeros_rad            |float8[]            | the radious of the first zeros, at most 10, represented as a ball
+positive_zeros_extra          |float8[]            | the remaining zeros via their correct double approximation
 prelabel                      |text                | ^
 primitive                     |boolean             | ^
 rational                      |boolean             | ^
 root_analytic_conductor       |double precision    | ^
-root_angle                    |double precision    | ^
-self_dual                     |boolean             | ^
-special_values_at             |double precision[]  | an array of t's where L(t) has been computed as a ball, t is in analytic normalization
-special_values_mid            |numeric[]           | the mid point of L(t)
-special_values_rad            |real[]              | the radious of L(t)
-spectral_label                |text                | ^
 root_angle_mid                |numeric             | the mid point of the argument of [root number] normalized between -.5 to .5
-root_angle_rad                |real                | the radious point of the argument of [root number] normalized between -.5 to .5
+root_angle_rad                |float8                | the radious point of the argument of [root number] normalized between -.5 to .5
+self_dual                     |boolean             | ^
+special_values_at             |float8[]            | an array of t's where L(t) has been computed as a ball, t is in analytic normalization
+special_values_mid            |numeric[]           | the mid point of L(t)
+special_values_rad            |float8[]              | the radious of L(t)
+spectral_label                |text                | ^
 trace_hash                    |bigint              | ^
 z1                            |numeric             | the first zero where all the last digit may have an error of +-1, e.g., we could represent pi as 3.1416
-poles                         |double precision[]  | location of the poles in arithmetic normalization
 
 
 
