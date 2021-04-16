@@ -1797,8 +1797,9 @@ class lfunction_collection:
                 F.write(sep.join([self.lfunctions_schema[col] for col in lfunctions_cols]))
                 F.write("\n\n")
                 ct = 0
-                # this is where most of the work happens and thus worth to parallelize
-                # the data generation
+                # this is where most of the work happens
+                # and thus it is worth to parallelize the data generation
+                # however, the decorator parallel uses the filesystem 
                 for chunks in self.chunkify(self.chunkify(self.lfunctions), size=ncpus):
                     for _, out in self.lfunctions_lines_prelabels(chunks):
                         if out:
