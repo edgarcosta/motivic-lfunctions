@@ -2,6 +2,7 @@ import ast
 import time
 import json
 import os
+import sys
 from collections import Counter, defaultdict
 from collections.abc import Iterable
 from sage.all import (
@@ -48,6 +49,7 @@ from sage.rings.real_mpfr import RealLiteral, RealField, RealNumber
 import re
 from dirichlet_conrey import DirichletGroup_conrey, DirichletCharacter_conrey
 from sage.structure.unique_representation import CachedRepresentation
+from halo import Halo
 
 
 mod1 = lambda elt: RDF(elt) - RDF(elt).floor()
@@ -55,6 +57,19 @@ mod1 = lambda elt: RDF(elt) - RDF(elt).floor()
 
 lhash_regex = re.compile(r'^\d+([,]\d+)*$')
 ec_lmfdb_label_regex = re.compile(r'(\d+)\.([a-z]+)(\d*)')
+
+
+def progress_bar(current, total, time, barLength = 20):
+    percent = float(current) * 100 / total
+    if current > 0:
+        eta = '%.2f' % (time*(total-current)/float(current),)
+    else:
+        eta = '+oo'
+    arrow   = '█' * int(percent/100 * barLength - 1)
+    spaces  = '░' * (barLength - len(arrow))
+
+    return ' Progress: [%s%s] %.2f%% ETA: %s seconds' % (arrow, spaces, percent, eta)
+
 
 
 def coeff_to_poly(c, var=None):
@@ -1537,14 +1552,20 @@ class lfunction_collection:
         self.ids_to_delete = {}
         self.orbits = defaultdict(list)
         self.instances = []
+        self.total = 0
 
 
 
 
 
     def populate(self, iterator):
-        for elt in iterator:
-            self.lfunctions[elt.prelabel].append(elt)
+        with Halo(text='Loading collection', spinner='dots') as spinner:
+            start_time = time.time()
+            for elt in iterator:
+                self.lfunctions[elt.prelabel].append(elt)
+            old_total = self.total
+            self.total = sum(map(len, self.lfunctions))
+            spinner.succeed('%d new L-functions loaded in %.2f seconds' % (self.total - old_total, time.time() - start_time))
 
         def remove_duplicates(objs):
             if len(objs) == 1:
@@ -1561,15 +1582,20 @@ class lfunction_collection:
                     new_objs.append(x)
             return new_objs
 
-        for prelabel, objs in self.lfunctions.items():
-            self.lfunctions[prelabel] = remove_duplicates(objs)
-            for elt in self.lfunctions[prelabel]:
-                if elt.orbit:
-                    self.orbits[elt.orbit].append(elt)
+        with Halo(text='Removing duplicates', spinner='dots') as spinner:
+            start_time = time.time()
+            for prelabel, objs in self.lfunctions.items():
+                self.lfunctions[prelabel] = remove_duplicates(objs)
+                for elt in self.lfunctions[prelabel]:
+                    if elt.orbit:
+                        self.orbits[elt.orbit].append(elt)
+            old_total = self.total
+            self.total = sum(map(len, self.lfunctions))
+            spinner.succeed('%d duplicates removed in %.2f seconds' % (old_total - self.total, time.time() - start_time))
 
 
     @staticmethod
-    def chunkify(l, size=10000):
+    def chunkify(l, size=100):
         res = [list(l)[elt*size:(elt + 1)*size] for elt in range(len(l)//size + 1)]
         assert len(l) == sum(map(len, res))
         return res
@@ -1580,33 +1606,43 @@ class lfunction_collection:
                                           for prelabel, objs in self.lfunctions.items()
                                           if any(x.label is None for x in objs)])
 
-        for chunk in prelabels_chunks:
-            db_data = {elt: [] for elt in chunk}
-            for l in self.dbsearch(
-                {'prelabel': {'$in': chunk}, 'label': {'$exists': True}},
-                    projection=lfunction_element.projection + ['origin', 'instance_types', 'instance_urls']):
-                db_data[l['prelabel']].append(lfunction_element(l, from_db=True))
-            for prelabel, objs in db_data.items():
-                indexes_taken = [x.index for x in objs] + [x.index for x in self.lfunctions[prelabel] if x.label]
-                nextindex = max(indexes_taken) + 1 if indexes_taken else 0
-                assert nextindex == len(indexes_taken) # we should not have missing indexes
-                for x in self.lfunctions[prelabel]:
-                    if x.label:
-                        continue
-                    for y in objs:
-                        if x == y:
-                            x.index = y.index
-                            x.merge_instances(y)
-                            # this distinguishes objects coming from
-                            # lfunc_lfunctions vs lfunc_data
-                            if getattr(y, 'positive_zeros_mid', None):
-                                self.ids_to_delete[y.id] = y.label
-                            break
-                    else:
-                        x.index = nextindex
-                        nextindex += 1
+        info = 'Computing labels'
+        with Halo(text=info, spinner='dots') as spinner:
+            ct = 0
+            start_time = time.time()
+            for chunk in prelabels_chunks:
+                spinner.text = info + progress_bar(ct, self.total, time.time() - start_time)
+                db_data = {elt: [] for elt in chunk}
+                #spinner.text = info + ': loading data from LMFDB'
+                for l in self.dbsearch(
+                    {'prelabel': {'$in': chunk}, 'label': {'$exists': True}},
+                        projection=lfunction_element.projection + ['origin', 'instance_types', 'instance_urls']):
+                    db_data[l['prelabel']].append(l)
+                for prelabel, objs in db_data.items():
+                    objs = [lfunction_element(l, from_db=True) for l in objs]
+                    indexes_taken = [x.index for x in objs] + [x.index for x in self.lfunctions[prelabel] if x.label]
+                    nextindex = max(indexes_taken) + 1 if indexes_taken else 0
+                    assert nextindex == len(indexes_taken) # we should not have missing indexes
+                    for x in self.lfunctions[prelabel]:
+                        ct += 1
+                        if x.label:
+                            continue
+                        for y in objs:
+                            if x == y:
+                                x.index = y.index
+                                x.merge_instances(y)
+                                # this distinguishes objects coming from
+                                # lfunc_lfunctions vs lfunc_data
+                                if getattr(y, 'positive_zeros_mid', None):
+                                    self.ids_to_delete[y.id] = y.label
+                                break
+                        else:
+                            x.index = nextindex
+                            nextindex += 1
 
-                    x.label = '%s-%s' % (x.prelabel, x.index)
+                        x.label = '%s-%s' % (x.prelabel, x.index)
+
+            spinner.succeed('Labels computed in %.2fs' % (time.time() - start_time,))
 
 
 
@@ -1636,34 +1672,41 @@ class lfunction_collection:
                 else:
                     unknown_factors[(Integer(elt.conductor), elt.motivic_weight, elt.degree)].append(elt)
 
+        info = 'Computing factors'
+        with Halo(text=info, spinner='dots') as spinner:
+            total = len(unknown_factors_inv) + sum(map(len, unknown_factors.values()))
+            ct = 0
+            start_time = time.time()
+
+            #first go to the ones where we know the invariants
+            for obj in unknown_factors_inv:
+                ct += 1
+                obj.compute_factorization([
+                    list(self.dbsearch(query,
+                                       projection=projection))
+                    for query in obj.factors_inv])
+
+                spinner.text = info + progress_bar(ct, total, time.time() - start_time)
 
 
+            # this might be quite slow
+            for (N, w, d), objs in unknown_factors.items():
+                if not N.is_prime():
+                    possible_factors = list(self.dbsearch( {
+                                            'label': {'$exists': True}, # we are doing this for the label
+                                            'conductor': {'$in': N.divisors()[1:-1]},
+                                            'motivic_weight': {'$lte': w}, # we are also considering translations
+                                            'degree': {'$lt': d},
+                                            'primitive': True,
+                                            'algebraic': True,
+                                        },
+                                        projection=projection))
+                    for elt in objs:
+                        ct += 1
+                        elt.compute_factorization(possible_factors)
+                spinner.text = info + progress_bar(ct, total, time.time() - start_time)
 
-
-
-
-        #first go to the ones where we know the invariants
-        for obj in unknown_factors_inv:
-            obj.compute_factorization([
-                list(self.dbsearch(query,
-                                   projection=projection))
-                for query in obj.factors_inv])
-
-
-        # this might be quite slow
-        for (N, w, d), objs in unknown_factors.items():
-            if not N.is_prime():
-                possible_factors = list(self.dbsearch( {
-                                        'label': {'$exists': True}, # we are doing this for the label
-                                        'conductor': {'$in': N.divisors()[1:-1]},
-                                        'motivic_weight': {'$lte': w}, # we are also considering translations
-                                        'degree': {'$lt': d},
-                                        'primitive': True,
-                                        'algebraic': True,
-                                    },
-                                    projection=projection))
-                for elt in objs:
-                    elt.compute_factorization(possible_factors)
+            spinner.succeed('Factors computed in %.2fs' % (time.time() - start_time,))
 
 
 
@@ -1673,27 +1716,36 @@ class lfunction_collection:
             raise NotImplementedError
 
     def _populate_instances(self):
-        self.instances = []
-        lfunctions_dict = {elt.label: elt for objs in self.lfunctions.values() for elt in objs}
-        label_chunks = self.chunkify(list(lfunctions_dict))
-        for chunk in label_chunks:
-            db_data = {elt: set() for elt in chunk}
-            for l in self.db.lfunc_instances.search(
-                {'label': {'$in': chunk}},
-                    projection=['label', 'type', 'url']):
-                db_data[l['label']].add((l['type'], l['url']))
-            for label, pairs in db_data.items():
-                elt = lfunctions_dict[label]
-                orig_pairs = set(zip(elt.instance_types, elt.instance_urls))
-                for t, url in orig_pairs.difference(pairs):
-                    self.instances.append({
-                        'factors': elt.factors,
-                        'label': elt.label,
-                        'type': t,
-                        'url': url})
-                if pairs:
-                    # update elt instance_types and instance_urls
-                    elt.instance_types, elt.instance_urls = zip(*orig_pairs.union(pairs))
+        info = 'Computing lfun_instances rows'
+        with Halo(text=info, spinner='dots') as spinner:
+            ct = 0
+            start_time = time.time()
+            self.instances = []
+            lfunctions_dict = {elt.label: elt for objs in self.lfunctions.values() for elt in objs}
+            label_chunks = self.chunkify(list(lfunctions_dict))
+            total = len(label_chunks)
+            for chunk in label_chunks:
+                ct += 1
+                db_data = {elt: set() for elt in chunk}
+                for l in self.db.lfunc_instances.search(
+                    {'label': {'$in': chunk}},
+                        projection=['label', 'type', 'url']):
+                    db_data[l['label']].add((l['type'], l['url']))
+                for label, pairs in db_data.items():
+                    elt = lfunctions_dict[label]
+                    orig_pairs = set(zip(elt.instance_types, elt.instance_urls))
+                    for t, url in orig_pairs.difference(pairs):
+                        self.instances.append({
+                            'factors': elt.factors,
+                            'label': elt.label,
+                            'type': t,
+                            'url': url})
+                    if pairs:
+                        # update elt instance_types and instance_urls
+                        elt.instance_types, elt.instance_urls = zip(*orig_pairs.union(pairs))
+
+                spinner.text = info + progress_bar(ct, total, time.time() - start_time)
+            spinner.succeed('New lfun_instances rows computed in %.2fs' % (time.time() - start_time,))
 
 
 
@@ -1707,32 +1759,47 @@ class lfunction_collection:
         self._populate_factors()
         self._populate_instances()
 
-        print("Writing to %s and %s" % (lfunctions_filename, instances_filename))
-
 
         sep = self.sep
         lfunctions_cols = list(self.lfunctions_schema)
         instances_cols = list(self.instances_schema)
-        with open(lfunctions_filename, "w") as F:
-            start_time = time.time()
-            F.write(sep.join(lfunctions_cols))
-            F.write("\n")
-            F.write(sep.join([self.lfunctions_schema[col] for col in lfunctions_cols]))
-            F.write("\n\n")
-            for prelabel, objs in self.lfunctions.items():
-                for elt in objs:
-                    F.write(sep.join(json_dumps(getattr(elt, col), self.lfunctions_schema[col]) for col in lfunctions_cols))
-            print("Wrote %s in %.2f seconds" % (lfunctions_filename, time.time() - start_time))
+        info = 'Writing %s' % lfunctions_filename
+        with Halo(text=info, spinner='dots') as spinner:
+            ct = 0
+            current = start_time = time.time()
+            with open(lfunctions_filename, "w") as F:
+                F.write(sep.join(lfunctions_cols))
+                F.write("\n")
+                F.write(sep.join([self.lfunctions_schema[col] for col in lfunctions_cols]))
+                F.write("\n\n")
+                ct = 0
+                for prelabel, objs in self.lfunctions.items():
+                    for elt in objs:
+                        ct += 1
+                        F.write(sep.join(json_dumps(getattr(elt, col), self.lfunctions_schema[col]) for col in lfunctions_cols))
+                    if time.time() - current > 1: # slow down the updates
+                        spinner.text = info + progress_bar(ct, self.total, time.time() - start_time)
+                        current = time.time()
 
-        with open(instances_filename, "w") as F:
-            F.write(sep.join(instances_cols))
-            F.write("\n")
-            F.write(sep.join([self.instances_schema[col] for col in instances_cols]))
-            F.write("\n\n")
-            for elt in self.instances:
-                # these are dictionaries
-                F.write(sep.join(json_dumps(elt.get(col), self.instances_schema[col]) for col in instances_cols))
-            print("Wrote %s in %.2f seconds" % (instances_filename, time.time() - start_time))
+            spinner.succeed("Wrote %s in %.2f seconds" % (lfunctions_filename, time.time() - start_time))
+
+        info = 'Writing %s' % lfunctions_filename
+        with Halo(text=info, spinner='dots') as spinner:
+            ct = 0
+            current = start_time = time.time()
+            total = len(self.instances)
+            with open(instances_filename, "w") as F:
+                F.write(sep.join(instances_cols))
+                F.write("\n")
+                F.write(sep.join([self.instances_schema[col] for col in instances_cols]))
+                F.write("\n\n")
+                for ct, elt in enumerate(self.instances, 1):
+                    # these are dictionaries
+                    F.write(sep.join(json_dumps(elt.get(col), self.instances_schema[col]) for col in instances_cols))
+                    if time.time() - current > 1: # slow down the updates
+                        spinner.text = info + progress_bar(ct, total, time.time() - start_time)
+                        current = time.time()
+            spinner.succeed("Wrote %s in %.2f seconds" % (instances_filename, time.time() - start_time))
 
 
 class riemann(lfunction_element, CachedRepresentation):
@@ -1811,103 +1878,26 @@ class riemann(lfunction_element, CachedRepresentation):
 
 
 
+if __name__ == "__main__":
+    os.sys.path.append("../lmfdb")
+    from lmfdb import db
+    assert db
+    try:
+        class_name = globals()[sys.argv[1]]
+        load_key = sys.argv[2]
+        fn_in = sys.argv[3]
+        fn_out = sys.argv[4]
+        fn_lfun = sys.argv[5]
+        fn_ins = sys.argv[6]
+    except ValueError:
+        print('Usage: %s class_name load_key input_filename output_filename lfun_filename instances_filename')
+        exit()
+    R = class_name(load_key=load_key)
+    L = lfunction_collection()
+    L.populate(R.read_files(fn_in, fn_out))
+    L.export(fn_lfun, fn_ins, True)
 
 
-
-
-# TODO
-
-
-if False:
-    desired_schema = {
-        'A10': 'numeric',
-        'A2': 'numeric',
-        'A3': 'numeric',
-        'A4': 'numeric',
-        'A5': 'numeric',
-        'A6': 'numeric',
-        'A7': 'numeric',
-        'A8': 'numeric',
-        'A9': 'numeric',
-        'Lhash': 'text',
-        'a10': 'jsonb',
-        'a2': 'jsonb',
-        'a3': 'jsonb',
-        'a4': 'jsonb',
-        'a5': 'jsonb',
-        'a6': 'jsonb',
-        'a7': 'jsonb',
-        'a8': 'jsonb',
-        'a9': 'jsonb',
-        'accuracy': 'smallint', # bits of precision for the zeros used by ECNF and CMF
-        'algebraic': 'boolean', # = arithmetic
-        'analytic_conductor': 'double precision',
-        'analytic_normalization': 'numeric', # this could be converted to a double, asbad_factors it is always an half integer
-        'bad_lfactors': 'jsonb',
-        'bad_primes': 'bigint[]',
-        'central_character': 'text',
-        'coeff_info': 'jsonb', # only used by Dirichlet L-functions, as ai and dirichlet_coefficients are stored algebraically
-        'coefficient_field': 'text',
-        'conductor': 'numeric',
-        'conductor_radical': 'integer',
-        'conjugate': 'text',
-        'credit': 'text',
-        'degree': 'smallint',
-        'dirichlet_coefficients': 'jsonb',
-        'euler_factors': 'jsonb',
-        'euler_factors_factorization': 'jsonb', # we only set these for large degree and weight
-        'factors': 'text[]', # array with the labels of its factors
-        'gamma_factors': 'jsonb', # these are stored in algebraic normalization
-        'group': 'text', # \in ['GL2', 'GL3', 'GL4', 'GSp4', None]
-        'id': 'bigint', # automatically set
-        'index': 'smallint', # set in a second iteration
-        'instance_types': 'text[]',
-        'instance_urls': 'text[]',
-        'label': 'text', # set in a second iteration
-        'leading_term': 'text',
-        'leading_term_mid': 'numeric',
-        'leaving_term_rad': 'real',
-        'load_key': 'text',
-        'motivic_weight': 'smallint',
-        'mu_imag': 'numeric[]',
-        'mu_real': 'smallint[]',
-        'nu_imag': 'numeric[]',
-        'nu_real_doubled': 'smallint[]',
-        'order_of_vanishing': 'smallint',
-        'origin': 'text',
-        'plot_delta': 'numeric',
-        'plot_values': 'jsonb',
-        'positive_zeros': 'jsonb',
-        'positive_zeros_mid': 'numeric[]',
-        'positive_zeros_rad': 'double precision[]',
-        'positive_zeros_extra': 'double precision[]',
-        'precision': 'smallint', # used by MaassForms, it is stored in digits
-        'prelabel': 'text',
-        'primitive': 'boolean',
-        'rational': 'boolean',
-        'root_analytic_conductor': 'double precision',
-        'root_angle': 'double precision', # stored between -.5 to .5
-        'root_number': 'text',
-        'root_number_mid': 'numeric[]', # mid real and mid imag
-        'root_number_rad': 'numeric[]', # respective radius
-        'self_dual': 'boolean',
-        'sign_arg': 'numeric',
-        'sign_arg_mid': 'numeric',
-        'sign_arg_rad': 'real',
-        'special_values_at': 'double precision[]', # in algebraic normalization
-        'special_values_mid': 'numeric[]', # an array of pairs of mid real and mid imag values
-        'special_values_rad': 'real[]', # the respective radius
-        'spectral_label': 'text', # copy data
-        'st_group': 'text', # we need to set it later
-        'symmetry_type': 'text', # \in ['orthogonal', 'symplectic', 'unitary', None]
-        'trace_hash': 'bigint',
-        'types': 'jsonb',
-        'values': 'jsonb', # only used by Dirichlet L-functions
-        'z1': 'numeric',
-        'z2': 'numeric',
-        'z3': 'numeric',
-        'poles': 'double precision[]',
-    }
 
 
 
