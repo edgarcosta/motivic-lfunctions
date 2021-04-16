@@ -1792,6 +1792,8 @@ class lfunction_collection:
                 F.write(sep.join([self.lfunctions_schema[col] for col in lfunctions_cols]))
                 F.write("\n\n")
                 ct = 0
+                # this is where most of the work happens and thus worth to parallelize
+                # the data generation
                 for chunks in self.chunkify(self.chunkify(self.lfunctions, size=ncpus)):
                     prelabels = sum(chunks, [])
                     for _, out in self.lfunctions_lines_prelabels(chunks):
