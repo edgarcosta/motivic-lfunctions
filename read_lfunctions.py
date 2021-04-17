@@ -5,6 +5,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import time
 from argparse import ArgumentParser
 from collections import Counter, defaultdict, OrderedDict
@@ -2080,11 +2081,17 @@ def Halo_wrap_Popen(args, j):
 if __name__ == "__main__":
     args = parse_args()
     os.sys.path.append(args.lmfdb)
-    stdout = sys.stdout
-    sys.stdout = open(os.devnull, 'w')
-    from lmfdb import db
-    assert db
-    sys.stdout = stdout
+    stderr = sys.stderr
+    f = tempfile.TemporaryFile()
+    sys.stderr = open(os.devnull, 'w')
+    try:
+        from lmfdb import db
+        db.logger.propagate = False
+        assert db
+    except Exception as e:
+        sys.stderr = stderr
+        raise e
+    sys.stderr = stderr
     C = globals()[args.class_name](*args.class_args)
 
 
