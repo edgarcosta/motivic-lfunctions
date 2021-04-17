@@ -1928,7 +1928,7 @@ def split(fn_in, col, n, sep=LfunctionsParser.sep):
                     begin = i
                     searching = False
         else:
-            splits.append((begin, i))
+            splits.append((begin, i + 1))
     return splits
 
 def stitch(main, suffixes):
@@ -2079,8 +2079,11 @@ def Halo_wrap_Popen(args, j):
 if __name__ == "__main__":
     args = parse_args()
     os.sys.path.append(args.lmfdb)
+    stdout = sys.stdout
+    sys.stdout = open(os.devnull, 'w')
     from lmfdb import db
     assert db
+    sys.stdout = stdout
     C = globals()[args.class_name](*args.class_args)
 
 
