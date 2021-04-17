@@ -2063,7 +2063,7 @@ def Halo_wrap_Popen(args, j):
         spinner = spinner_text(spinner,
                                non_block_read(foo.stdout),
                                message)
-        time.sleep(1)
+        time.sleep(0.16)
     else:
         spinner = spinner_text(spinner,
                                non_block_read(foo.stdout),
