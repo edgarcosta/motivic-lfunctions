@@ -1,11 +1,17 @@
 import ast
-import time
+import fcntl
 import json
 import os
-import sys
-import multiprocessing
+import re
+import subprocess
+import time
+from argparse import ArgumentParser
 from collections import Counter, defaultdict, OrderedDict
 from collections.abc import Iterable
+from concurrent.futures import ThreadPoolExecutor
+from dirichlet_conrey import DirichletGroup_conrey, DirichletCharacter_conrey
+from halo import Halo
+from itertools import islice
 from sage.all import (
     CDF,
     ComplexBallField,
@@ -35,7 +41,6 @@ from sage.all import (
     log,
     magma,
     next_prime,
-    parallel,
     prime_powers,
     prime_range,
     primes_first_n,
@@ -48,11 +53,7 @@ from sage.all import (
 from sage.rings.real_arb import RealBall
 from sage.rings.real_double import RealDoubleElement
 from sage.rings.real_mpfr import RealLiteral, RealField, RealNumber
-import re
-from dirichlet_conrey import DirichletGroup_conrey, DirichletCharacter_conrey
 from sage.structure.unique_representation import CachedRepresentation
-from halo import Halo
-from itertools import islice
 
 
 mod1 = lambda elt: RDF(elt) - RDF(elt).floor()
@@ -62,18 +63,21 @@ lhash_regex = re.compile(r'^\d+([,]\d+)*$')
 ec_lmfdb_label_regex = re.compile(r'(\d+)\.([a-z]+)(\d*)')
 
 
-def progress_bar(current, total, time, barLength = 20):
+def progress_bar(current, total, time, barLength = 10):
     percent = float(current) * 100 / total
     if current > 0:
         eta = '%.2f' % (time*(total-current)/float(current),)
     else:
         eta = '+oo'
-    done   = '█' * int(percent/100 * barLength)
-    notdone  = '░' * (barLength - len(done))
+    done   = '▰' * int(percent/100 * barLength)
+    notdone  = '▱' * (barLength - len(done))
+
 
     return ' Progress: [%s%s] %.2f%% ETA: %s seconds' % (done, notdone, percent, eta)
 
 
+def chunkify(l, size=100):
+    return [islice(l, elt*size, (elt + 1)*size) for elt in range(len(l)//size + 1)]
 
 def coeff_to_poly(c, var=None):
     # from lmfdb/utils/utilities.py
@@ -356,8 +360,9 @@ def conductor_an(GR, GC):
     return (2*log_L_inf(1/2, GR, GC).real()).exp()
 
 
-class read_lfunctions(object):
+class LfunctionsParser(object):
     default_prec = 300
+    sep = ':'
     @lazy_class_attribute
     def CBF(cls):
         return ComplexBallField(cls.default_prec)
@@ -424,28 +429,34 @@ class read_lfunctions(object):
         return RDF(elt).round()
 
 
-    def read_line(self, elt, headers, sep):
-        return {k: getattr(self, 'read_' + k)(v) for k, v in zip(headers, strip(elt).split(sep))}
+    def read_line(self, elt, headers):
+        return {k: getattr(self, 'read_' + k)(v) for k, v in zip(headers, strip(elt).split(self.sep))}
 
 
-    def read_out_line(self, line, sep=":"):
-        return self.read_line(line, self.out_headers, sep)
+    def read_out_line(self, line):
+        return self.read_line(line, self.out_headers)
 
-    def read_in_line(self, line, sep=":"):
-        return self.read_line(line, self.in_headers, sep)
+    def read_in_line(self, line):
+        return self.read_line(line, self.in_headers)
 
-    def read_record(self, in_line, out_line, sep=":"):
+    def read_record(self, in_line, out_line):
         raise NotImplementedError("you should override this ;)")
 
-    def read_files(self, in_file, out_file):
+    def read_files(self, in_file, out_file, begin=0, end=-1):
+        print(in_file, out_file, begin, end)
         with open(in_file) as iF:
             with open(out_file) as oF:
-                for i, o in zip(iF, oF):
-                    for elt in self.process_record(self.read_record(i,o)):
+                for i, (in_line, out_line) in enumerate(zip(iF, oF)):
+                    if i < begin:
+                        continue
+                    if i == end:
+                        break
+                    for elt in self.process_record(self.read_record(in_line, out_line)):
                         yield elt
 
     def process_record(self, rec):
         yield rec
+
 
 
 
@@ -472,8 +483,8 @@ class lfunction_element(object):
         'trace_hash',
     ]
     euler_factors_bound = 100
-    RBF = read_lfunctions.RBF
-    CBF = read_lfunctions.CBF
+    RBF = LfunctionsParser.RBF
+    CBF = LfunctionsParser.CBF
     ZZT = PolynomialRing(ZZ, "T")
 
     def __init__(self, data, from_db=False):
@@ -1156,8 +1167,9 @@ def sym_pol_ECQ(a, p, n):
     return [int(elt.substitute(a=a, p=p)) for elt in sym_pol_gen(n)]
 
 
-class read_smalljac(read_lfunctions):
+class SmalljacParser(LfunctionsParser):
     ZZT = PolynomialRing(ZZ, "T")
+    block_col = 2
 
 
     @classmethod
@@ -1168,7 +1180,7 @@ class read_smalljac(read_lfunctions):
         in_headers = in_headers ='origin_label:power:conductor:curve:hard_factors'.split(':')
         out_headers = 'origin_label:trace_hash:second_moment:root_number_acb:order_of_vanishing:leading_term_arb:special_values_acb:positive_zeros_arb:positive_zeros_extra:plot_delta:plot_values'.split(':')
         self.load_key = load_key
-        read_lfunctions.__init__(self, in_headers, out_headers)
+        LfunctionsParser.__init__(self, in_headers, out_headers)
 
     @lazy_attribute
     def res_constant(self):
@@ -1234,7 +1246,7 @@ class read_smalljac(read_lfunctions):
     def read_power(self, s):
         return int(s)
 
-    def read_record(self, in_line, out_line, sep=":"):
+    def read_record(self, in_line, out_line):
         res = dict(self.res_constant)
         res.update(self.read_in_line(in_line))
         out_res = self.read_out_line(out_line)
@@ -1510,9 +1522,9 @@ class artin_orbit(artin):
         raise NotImplementedError
 
 
-ncpus = multiprocessing.cpu_count()//2
 
 class lfunction_collection:
+    sep = ':'
     @lazy_class_attribute
     def db(cls):
         from lmfdb import db
@@ -1547,17 +1559,18 @@ class lfunction_collection:
     @lazy_class_attribute
     def lfunctions_schema(cls):
         return OrderedDict((k, cls.db.lfunc_data.col_type[k])
-                           for k in sorted(cls.db.lfunc_data.col_type[k]) if k != 'id')
+                            for k in sorted(cls.db.lfunc_data.col_type)
+                            if k != 'id')
 
     @lazy_class_attribute
     def instances_schema(cls):
         return OrderedDict((k, cls.db.lfunc_instances.col_type[k])
-                           for k in sorted(cls.db.lfunc_instances.col_type[k]) if k != 'id')
+                            for k in sorted(cls.db.lfunc_instances.col_type)
+                            if k != 'id')
 
 
-    def __init__(self, sep=':'):
+    def __init__(self):
         self.lfunctions = defaultdict(list)
-        self.sep = sep
         self.ids_to_delete = {}
         self.orbits = defaultdict(list)
         self.instances = []
@@ -1569,11 +1582,11 @@ class lfunction_collection:
 
     def populate(self, iterator):
         # this is IO limited
-        with Halo(text='Loading collection', spinner='dots', interval=320) as spinner:
+        with Halo(text='Loading collection', spinner='dots') as spinner:
             current = start_time = time.time()
             for i, elt in enumerate(iterator, 1):
                 self.lfunctions[elt.prelabel].append(elt)
-                if time.time() - current > 2:
+                if time.time() - current > 1:
                     rate = i/(time.time() - start_time)
                     spinner.text = 'Loading collection: %.2f lines/second' % rate
                     current = time.time()
@@ -1608,18 +1621,15 @@ class lfunction_collection:
             spinner.succeed('%d duplicates removed in %.2f seconds' % (old_total - self.total, time.time() - start_time))
 
 
-    @staticmethod
-    def chunkify(l, size=100):
-        return [islice(l, elt*size, (elt + 1)*size) for elt in range(len(l)//size + 1)]
 
 
     def _populate_label(self):
-        prelabels_chunks = self.chunkify([prelabel
+        info = 'Computing labels'
+        with Halo(text=info, spinner='dots') as spinner:
+            prelabels_chunks = chunkify([prelabel
                                           for prelabel, objs in self.lfunctions.items()
                                           if any(x.label is None for x in objs)])
 
-        info = 'Computing labels'
-        with Halo(text=info, spinner='dots') as spinner:
             ct = 0
             start_time = time.time()
             for chunk in prelabels_chunks:
@@ -1675,17 +1685,17 @@ class lfunction_collection:
         ]
         unknown_factors = defaultdict(list)
         unknown_factors_inv = []
-        for prelabel, objs in self.lfunctions.items():
-            for elt in objs:
-                if elt.primitive or hasattr(elt, 'factors_obj') or elt.factors:
-                    continue
-                elif elt.factors_inv:
-                    unknown_factors_inv.append(elt)
-                else:
-                    unknown_factors[(Integer(elt.conductor), elt.motivic_weight, elt.degree)].append(elt)
-
         info = 'Computing factors'
         with Halo(text=info, spinner='dots') as spinner:
+            for prelabel, objs in self.lfunctions.items():
+                for elt in objs:
+                    if elt.primitive or hasattr(elt, 'factors_obj') or elt.factors:
+                        continue
+                    elif elt.factors_inv:
+                        unknown_factors_inv.append(elt)
+                    else:
+                        unknown_factors[(Integer(elt.conductor), elt.motivic_weight, elt.degree)].append(elt)
+
             total = len(unknown_factors_inv) + sum(map(len, unknown_factors.values()))
             ct = 0
             start_time = time.time()
@@ -1734,13 +1744,13 @@ class lfunction_collection:
             start_time = time.time()
             self.instances = []
             lfunctions_dict = {elt.label: elt for objs in self.lfunctions.values() for elt in objs}
-            label_chunks = self.chunkify(lfunctions_dict)
+            label_chunks = chunkify(lfunctions_dict)
             total = len(label_chunks)
             for chunk in label_chunks:
                 ct += 1
                 db_data = {elt: set() for elt in chunk}
                 for l in self.db.lfunc_instances.search(
-                    {'label': {'$in': chunk}},
+                    {'label': {'$in': list(chunk)}},
                         projection=['label', 'type', 'url']):
                     db_data[l['label']].add((l['type'], l['url']))
                 for label, pairs in db_data.items():
@@ -1759,19 +1769,10 @@ class lfunction_collection:
                 spinner.text = info + progress_bar(ct, total, time.time() - start_time)
             spinner.succeed('New lfun_instances rows computed in %.2fs' % (time.time() - start_time,))
 
-    @parallel(ncpus=ncpus)
-    def lfunctions_lines_prelabels(self, prelabels):
-        return '\n'.join(
-            '\n'.join(
-                self.sep.join(
-                    json_dumps(getattr(elt, col), typ)
-                    for col, typ in self.lfunctions_schema.items())
-                for elt in self.lfunctions[prelabel])
-            for prelabel in prelabels)
 
 
 
-    def export(self, lfunctions_filename, instances_filename, overwrite=False, save_memory=False):
+    def export(self, lfunctions_filename, instances_filename, overwrite=False, save_memory=False, headers=True):
         if not overwrite and (os.path.exists(lfunctions_filename) or os.path.exists(instances_filename)):
             raise ValueError("Files already exist")
 
@@ -1789,24 +1790,25 @@ class lfunction_collection:
             ct = 0
             current = start_time = time.time()
             with open(lfunctions_filename, "w") as F:
-                F.write(sep.join(lfunctions_cols))
-                F.write("\n")
-                F.write(sep.join([self.lfunctions_schema[col] for col in lfunctions_cols]))
-                F.write("\n\n")
+                if headers:
+                    F.write(sep.join(lfunctions_cols))
+                    F.write("\n")
+                    F.write(sep.join([self.lfunctions_schema[col] for col in lfunctions_cols]))
+                    F.write("\n\n")
                 ct = 0
-                # this is where most of the work happens
-                # and thus it is worth to parallelize the data generation
-                # however, the decorator parallel uses the filesystem 
-                for chunks in self.chunkify(self.chunkify(self.lfunctions), size=ncpus):
-                    for _, out in self.lfunctions_lines_prelabels(chunks):
-                        if out:
-                            F.write(out + '\n')
+                for _, objs in self.lfunctions.items():
+                    ct += len(objs)
+                    F.write(
+                        '\n'.join(
+                            self.sep.join(
+                                json_dumps(getattr(elt, col), typ)
+                                for col, typ in self.lfunctions_schema.items())
+                            for elt in objs) + '\n')
                     if save_memory:
-                        ctsum = lambda elt: len(self.lfunctions.pop(elt))
-                    else:
-                        ctsum = lambda elt: len(self.lfunctions[elt])
-                    ct += sum(map(ctsum, sum(chunks, [])))
-                    spinner.text = info + progress_bar(ct, self.total, time.time() - start_time)
+                        objs.clear()
+                    if time.time() - current > 1: # slow down the updates
+                        spinner.text = info + progress_bar(ct, self.total, time.time() - start_time)
+                        current = time.time()
 
             spinner.succeed("Wrote %s in %.2f seconds" % (lfunctions_filename, time.time() - start_time))
 
@@ -1816,10 +1818,11 @@ class lfunction_collection:
             current = start_time = time.time()
             total = len(self.instances)
             with open(instances_filename, "w") as F:
-                F.write(sep.join(instances_cols))
-                F.write("\n")
-                F.write(sep.join([self.instances_schema[col] for col in instances_cols]))
-                F.write("\n\n")
+                if headers:
+                    F.write(sep.join(instances_cols))
+                    F.write("\n")
+                    F.write(sep.join([self.instances_schema[col] for col in instances_cols]))
+                    F.write("\n\n")
                 for ct, elt in enumerate(self.instances, 1):
                     # these are dictionaries
                     F.write(sep.join(json_dumps(elt.get(col), self.instances_schema[col]) for col in instances_cols))
@@ -1904,26 +1907,206 @@ class riemann(lfunction_element, CachedRepresentation):
         return TraceHash_from_ap([1 for _ in TH_P])
 
 
+def split(fn_in, col, n, sep=LfunctionsParser.sep):
+    if n == 1:
+        return [(0, -1)]
+    num_lines = sum(1 for line in open(fn_in))
+    desired_lines = (num_lines + n - 1)//n
+    splits = []
+    with open(fn_in) as iF:
+        searching = False
+        oldcol = None
+        begin = 0
+        for i, line in enumerate(iF):
+            if i != 0 and i % desired_lines == 0:
+                searching = True
+                oldcol = line.split(sep)[col]
+            if searching:
+                newcol = line.split(sep)[col]
+                if newcol != oldcol:
+                    splits.append((begin, i))
+                    begin = i
+                    searching = False
+        else:
+            splits.append((begin, i))
+    return splits
+
+def stitch(main, suffixes):
+    if suffixes:
+        text = f"Stitching {main} "
+        start_time = time.time()
+        with Halo(text, spinner="dots") as spinner:
+            with open(main, 'a') as W:
+                for i, suffix in enumerate(suffixes, 1):
+                    filename = main + suffix
+                    with open(filename) as F:
+                        for line in F:
+                            W.write(line)
+                    spinner.text = text + progress_bar(i, len(suffixes), time.time() - start_time)
+                    os.remove(filename)
+            spinner.succeed(f'{main} stitched in in %.2fs' % (time.time() - start_time,))
+    return True
+
+
+
+
+
+
+
+def parse_args():
+    parser = ArgumentParser()
+    parser.add_argument(
+        "-j",
+        "--jobs",
+        dest="jobs",
+        metavar="N",
+        type=int,
+        help="Run up to N jobs in parallel. [default: %(default)s]",
+        default=1,
+    )
+    parser.add_argument(
+        "--lmfdb",
+        dest="lmfdb",
+        metavar="dir",
+        help="LMFDB directory [default: %(default)s]",
+        default="../lmfdb",
+    )
+    parser.add_argument(
+        "--begin",
+        type=int,
+        default=0,
+    )
+    parser.add_argument(
+        "--end",
+        type=int,
+        default=-1
+    )
+    parser.add_argument('class_name', help='Class name of the reading class, e.g. SmalljacParser')
+    parser.add_argument('input', help='file used as input for the lfunctions library')
+    parser.add_argument('output', help='the output from the lfunctions library')
+    parser.add_argument('lfunc_data', help='file used to add columns to the table lfunc_instances')
+    parser.add_argument('lfunc_instances', help='file used to add columns to the table lfunc_instances')
+    parser.add_argument('class_args', nargs='*', help='args used to construct the reading class', default=[])
+
+    return parser.parse_args()
+
+def do_block(C, fn_in, fn_out, fn_lfun, fn_ins, begin, end):
+    L = lfunction_collection()
+    L.populate(C.read_files(fn_in, fn_out, begin, end))
+    L.export(fn_lfun, fn_ins, overwrite=True, save_memory=True, headers= begin == 0)
+    return True
+
+def do_block_Popen(args, j, begin, end):
+    suffix = '' if begin == 0 else ('_%d' % begin)
+    args = ['sage', '-python', os.path.basename(__file__),
+            '--lmfdb', args.lmfdb,
+            '--begin', str(begin),
+            '--end', str(end),
+            args.class_name,
+            args.input,
+            args.output,
+            args.lfunc_data + suffix,
+            args.lfunc_instances + suffix] + args.class_args
+
+    print(' '.join(args))
+    return Halo_wrap_Popen(args, j)
+
+
+def Halo_wrap_Popen(args, j):
+    color = ['grey', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white'][j%8]
+    prefix = f'{j}:'
+    def non_block_read(output):
+        ''' even in a thread, a normal read with block until the buffer is full '''
+        fd = output.fileno()
+        fl = fcntl.fcntl(fd, fcntl.F_GETFL)
+        fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+        try:
+            return output.read()
+        except Exception:
+            return ''
+
+    def spinner_text(spinner, output, message):
+        last = ''
+        for line in output.rstrip('\n').split('\n'):
+            if '✔' in line:
+                last = ''
+                if not spinner:
+                    spinner = Halo(prefix + line, spinner="dots")
+                    spinner.start()
+                spinner.succeed(prefix + line)
+                spinner = None
+            elif line:
+                last = line
+        else:
+            if last:
+                if not spinner:
+                    spinner = Halo(prefix + last, spinner="dots")
+                    spinner.start()
+                else:
+                    spinner.text = prefix + last
+        return spinner
+
+
+    foo = subprocess.Popen(args,
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE,
+                           universal_newlines=True,
+                           bufsize=1,
+                           )
+    message = "Running " + ' '.join(args)
+    spinner = Halo(prefix + message, spinner="dots", color=color)
+    spinner.start()
+    while foo.poll() is None:
+        spinner = spinner_text(spinner,
+                               non_block_read(foo.stdout),
+                               message)
+        time.sleep(0.08)
+    else:
+        spinner = spinner_text(spinner,
+                               non_block_read(foo.stdout),
+                               message)
+    if foo.returncode != 0:
+        print(foo.communicate()[1])
+    return foo.returncode
+
+
+
 
 
 if __name__ == "__main__":
-    os.sys.path.append("../lmfdb")
+    args = parse_args()
+    os.sys.path.append(args.lmfdb)
     from lmfdb import db
     assert db
-    try:
-        class_name = globals()[sys.argv[1]]
-        load_key = sys.argv[2]
-        fn_in = sys.argv[3]
-        fn_out = sys.argv[4]
-        fn_lfun = sys.argv[5]
-        fn_ins = sys.argv[6]
-    except ValueError:
-        print('Usage: %s class_name load_key input_filename output_filename lfun_filename instances_filename')
-        exit()
-    R = class_name(load_key=load_key)
-    L = lfunction_collection()
-    L.populate(R.read_files(fn_in, fn_out))
-    L.export(fn_lfun, fn_ins, True, True)
+    C = globals()[args.class_name](*args.class_args)
+
+
+    if args.jobs == 1:
+        do_block(C, args.input, args.output,
+                 args.lfunc_data, args.lfunc_instances, args.begin, args.end)
+
+    else:
+        assert (args.begin, args.end) == (0,-1)
+        print('Running %d jobs' % args.jobs)
+        splits = split(args.input, C.block_col,  args.jobs)
+        jobs = []
+        with ThreadPoolExecutor(max_workers=args.jobs) as e:
+            for j, (begin, end) in enumerate(splits, 1):
+                jobs.append(e.submit(do_block_Popen, args, j, begin, end))
+        for i, j in enumerate(jobs):
+            if j.result() != 0:
+                raise ValueError(f'Something went wrong with {i} Exit code:{j.result()}')
+
+        jobs = []
+        suffixes = [f'_{elt[0]}' for elt in splits[1:]]
+        with ThreadPoolExecutor(max_workers=args.jobs) as e:
+            jobs.append(e.submit(stitch, args.lfunc_data, suffixes))
+            jobs.append(e.submit(stitch, args.lfunc_instances, suffixes))
+
+        for i, j in enumerate(jobs):
+            if not j.result():
+                raise ValueError(f'Something went wrong with {i}')
+
 
 
 
