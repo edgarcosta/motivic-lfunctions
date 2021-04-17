@@ -2025,13 +2025,16 @@ def Halo_wrap_Popen(args, j):
         except Exception:
             return ''
 
+    def Spinner(message):
+        return  Halo(prefix + message, spinner="dots", color=color)
+
     def spinner_text(spinner, output, message):
         last = ''
         for line in output.rstrip('\n').split('\n'):
             if '✔' in line:
                 last = ''
                 if not spinner:
-                    spinner = Halo(prefix + line, spinner="dots")
+                    spinner = Spinner(line)
                     spinner.start()
                 spinner.succeed(prefix + line)
                 spinner = None
@@ -2040,7 +2043,7 @@ def Halo_wrap_Popen(args, j):
         else:
             if last:
                 if not spinner:
-                    spinner = Halo(prefix + last, spinner="dots")
+                    spinner = Spinner(last)
                     spinner.start()
                 else:
                     spinner.text = prefix + last
@@ -2054,7 +2057,7 @@ def Halo_wrap_Popen(args, j):
                            bufsize=1,
                            )
     message = "Running " + ' '.join(args)
-    spinner = Halo(prefix + message, spinner="dots", color=color)
+    spinner = Spinner(message)
     spinner.start()
     while foo.poll() is None:
         spinner = spinner_text(spinner,
