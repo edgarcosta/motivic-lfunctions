@@ -1635,11 +1635,12 @@ class lfunction_collection:
             ct = 0
             start_time = time.time()
             for chunk in prelabels_chunks:
+                chunk = list(chunk)
                 spinner.text = info + progress_bar(ct, self.total, time.time() - start_time)
                 db_data = {elt: [] for elt in chunk}
                 #spinner.text = info + ': loading data from LMFDB'
                 for l in self.dbsearch(
-                    {'prelabel': {'$in': list(chunk)}, 'label': {'$exists': True}},
+                    {'prelabel': {'$in': chunk}, 'label': {'$exists': True}},
                         projection=lfunction_element.projection + ['origin', 'instance_types', 'instance_urls']):
                     db_data[l['prelabel']].append(l)
                 for prelabel, objs in db_data.items():
@@ -1750,9 +1751,10 @@ class lfunction_collection:
             total = len(label_chunks)
             for chunk in label_chunks:
                 ct += 1
+                chunk = list(chunk)
                 db_data = {elt: set() for elt in chunk}
                 for l in self.db.lfunc_instances.search(
-                    {'label': {'$in': list(chunk)}},
+                    {'label': {'$in': chunk}},
                         projection=['label', 'type', 'url']):
                     db_data[l['label']].add((l['type'], l['url']))
                 for label, pairs in db_data.items():
