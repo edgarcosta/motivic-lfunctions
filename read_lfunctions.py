@@ -35,7 +35,6 @@ from sage.all import (
     ZZ,
     cached_function,
     ceil,
-    floor,
     gcd,
     gp,
     lazy_attribute,
@@ -58,28 +57,30 @@ from sage.rings.real_mpfr import RealLiteral, RealField, RealNumber
 from sage.structure.unique_representation import CachedRepresentation
 
 
-mod1 = lambda elt: RDF(elt) - RDF(elt).floor()
+def mod1(elt):
+    return RDF(elt) - RDF(elt).floor()
 
 
 lhash_regex = re.compile(r'^\d+([,]\d+)*$')
 ec_lmfdb_label_regex = re.compile(r'(\d+)\.([a-z]+)(\d*)')
 
 
-def progress_bar(current, total, time, barLength = 10):
+def progress_bar(current, total, time, barLength=10):
     percent = float(current) * 100 / total
     if current > 0:
-        eta = '%.2f' % (time*(total-current)/float(current),)
+        eta = '%.2f' % (time * (total - current) / float(current),)
     else:
         eta = '+oo'
-    done   = '▰' * int(percent/100 * barLength)
-    notdone  = '▱' * (barLength - len(done))
-
+    done = '▰' * int(percent / 100 * barLength)
+    notdone = '▱' * (barLength - len(done))
 
     return ' Progress: [%s%s] %.2f%% ETA: %s seconds' % (done, notdone, percent, eta)
 
 
 def chunkify(l, size=100):
-    return [islice(l, elt*size, (elt + 1)*size) for elt in range(len(l)//size + 1)]
+    return [islice(l, elt * size, (elt + 1) * size)
+            for elt in range(len(l) // size + 1)]
+
 
 def coeff_to_poly(c, var=None):
     # from lmfdb/utils/utilities.py
@@ -108,6 +109,7 @@ def coeff_to_poly(c, var=None):
         var = 'x'
     return PolynomialRing(QQ, var)(c)
 
+
 def force_list_int(elt):
     if isinstance(elt, Iterable):
         return [force_list_int(x) for x in elt]
@@ -119,17 +121,19 @@ def force_list_int(elt):
 def strip(elt):
     return elt.replace(' ', '').strip()
 
+
 def atoii(elt, level=1, stripped=True):
     s = strip(elt) if not stripped else elt
     assert level >= 1
     if set('[]') == set(s):
         return ast.literal_eval(s)
-    assert s[:level] == '['*level and s[-level:] == ']'*level, s
-    if level==1:
+    assert s[:level] == '[' * level and s[-level:] == ']' * level, s
+    if level == 1:
         return list(map(int, s[1:-1].split(',')))
     else:
-        s = s[level:-1].split('['*(level-1))
-        return [atoii('['*(level-1) + c.rstrip(','), level=level-1) for c in s]
+        s = s[level:-1].split('[' * (level - 1))
+        return [atoii('[' * (level - 1) + c.rstrip(','), level=level - 1) for c in s]
+
 
 # WRITE utils
 def json_dumps(inp, typ, recursing=False):
@@ -185,13 +189,12 @@ def json_dumps(inp, typ, recursing=False):
         raise TypeError("Invalid input %s (%s) for postgres type %s" % (inp, type(inp), typ))
 
 
-
-
-
 float_re = r'[-+]?(?:[0-9]*[.]?[0-9]+(?:[ed][-+]?[0-9]+)?|inf|nan)'
 FLOAT_RE = re.compile(float_re)
 ARB_RE = re.compile(r'\[({float_re}) \+/- ({float_re})\]'.format(
     float_re=float_re))
+
+
 def realball_to_mid_rad_str(elt):
     # we really on arb_printn
     # https://arblib.org/arb.html#c.arb_printn
@@ -208,40 +211,42 @@ def realball_to_mid_rad_str(elt):
 def complexball_to_mid_rad_str(elt, extra_digits=9):
     m1, r1 = realball_to_mid_rad_str(elt.real())
     m2, r2 = realball_to_mid_rad_str(elt.imag())
-    return '{%s,%s}' % (m1, m2), '{%s,%s}' % (r1,r2)
+    return '{%s,%s}' % (m1, m2), '{%s,%s}' % (r1, r2)
 
 
 class RealBallLiteral(RealBall):
     def __init__(self, parent, mid, rad):
         self.literal = r'[{mid} +/- {rad}]'.format(mid=mid, rad=rad)
         return parent(self.literal)
+
     def __repr__(self):
         return self.literal
 
 
-
-
-
 def enough_digits(elt, digits=6):
-    return elt.abs().rad_as_ball()*10**digits - 1 < 0
+    return elt.abs().rad_as_ball() * 10**digits - 1 < 0
 
 
 def mid_point_100bits(elt):
     assert elt.rad().log(2) <= -100
-    elt100 = elt*2**100
+    elt100 = elt * 2**100
     eltint = elt100.mid().round()
-    ball = elt.parent()([eltint -1, eltint + 1])<<-100
+    ball = elt.parent()([eltint - 1, eltint + 1]) << -100
     assert elt in ball
     return eltint, ball
+
 
 def ball_from_midpoint(elt):
     assert isinstance(elt, str)
     rn = RealField(200)(elt)
-    eltint = (rn<<100).round()
-    ball = RealBallField(200)([eltint -1, eltint + 1])<<-100
+    eltint = (rn << 100).round()
+    ball = RealBallField(200)([eltint - 1, eltint + 1]) << -100
     return ball
 
+
 LOG_TEN_TWO_PLUS_EPSILON = float.fromhex('0x3.5269e12f346e4p+0')
+
+
 def numeric_to_ball(elt):
     """
     converts a string representing a real number into a ball
@@ -255,11 +260,11 @@ def numeric_to_ball(elt):
     """
     if isinstance(elt, float) or elt in RDF:
         elt = RR(elt)
-        return RBF(elt, elt.ulp()*0.5)
+        return RBF(elt, elt.ulp() * 0.5)
     assert isinstance(elt, str)
     sigfig_mantissa = elt.lstrip('-0.')
     sigfigs = len(sigfig_mantissa) - ('.' in sigfig_mantissa)
-    bits = int(LOG_TEN_TWO_PLUS_EPSILON*sigfigs)+1
+    bits = int(LOG_TEN_TWO_PLUS_EPSILON * sigfigs) + 1
     # note that the precision is already higher than what elt represents
     assert '.' in elt
     # the last 3 digits might be off
@@ -282,6 +287,7 @@ def approx_ball(elt, prec=53):
     else:
         return None
 
+
 # to avoid the discontinuity at (-inf, 0], which will result in
 # [+/- 3.15]
 def arg_hack(foo):
@@ -295,8 +301,9 @@ def arg_hack(foo):
     else:
         return foo.arg()
 
+
 def normalized_arg(foo):
-    arg = arg_hack(foo)/(2*foo.parent().pi())
+    arg = arg_hack(foo) / (2 * foo.parent().pi())
     while arg > 0.5:
         arg -= 1
     while arg <= -0.5:
@@ -305,26 +312,25 @@ def normalized_arg(foo):
 
 
 def extend_multiplicatively(Z):
-    for pp in prime_powers(len(Z)-1):
-        for k in range(1, (len(Z) - 1)//pp + 1):
+    for pp in prime_powers(len(Z) - 1):
+        for k in range(1, (len(Z) - 1) // pp + 1):
             if gcd(k, pp) == 1:
-                Z[pp*k] = Z[pp]*Z[k]
+                Z[pp * k] = Z[pp] * Z[k]
+
 
 def dirichlet_coefficients(euler_factors):
     R = vector(sum(euler_factors), []).base_ring()
     PS = PowerSeriesRing(R)
     pef = list(zip(primes_first_n(len(euler_factors)), euler_factors))
     an_list_bound = next_prime(pef[-1][0])
-    res = [1]*an_list_bound
+    res = [1] * an_list_bound
     for p, ef in pef:
-        k = RR(an_list_bound).log(p).floor()+1
-        foo = (1/PS(ef)).padded_list(k)
+        k = RR(an_list_bound).log(p).floor() + 1
+        foo = (1 / PS(ef)).padded_list(k)
         for i in range(1, k):
             res[p**i] = foo[i]
     extend_multiplicatively(res)
     return res
-
-
 
 
 @cached_function
@@ -338,33 +344,35 @@ def primitivize(label):
     char = DirichletCharacter_conrey(DirGroup(m), n).primitive_character()
     return "%d.%d" % (char.modulus(), char.number())
 
+
 def prod_central_character(labels):
-    char =  prod([
+    char = prod([
         DirichletCharacter_conrey(DirGroup(m), n).primitive_character()
-        for m,n in [[ZZ(a) for a in label.split(".")] for label in labels]
+        for m, n in [[ZZ(a) for a in label.split(".")] for label in labels]
     ]).primitive_character()
     return "%d.%d" % (char.modulus(), char.number())
-
-
 
 
 logpi = RR.pi().log()
 log2pi = (2 * RR.pi()).log()
 
+
 def log_L_inf(s, mu, nu):
-    return ((sum([psi((s + elt) / 2) for elt in  mu]) -
+    return ((sum([psi((s + elt) / 2) for elt in mu]) -
              len(mu) * logpi) / 2 +
             sum([psi(s + elt) for elt in nu]) -
             len(nu) * log2pi)
 
+
 @cached_function
 def conductor_an(GR, GC):
-    return (2*log_L_inf(1/2, GR, GC).real()).exp()
+    return (2 * log_L_inf(1 / 2, GR, GC).real()).exp()
 
 
 class LfunctionsParser(object):
     default_prec = 300
     sep = ':'
+
     @lazy_class_attribute
     def CBF(cls):
         return ComplexBallField(cls.default_prec)
@@ -386,14 +394,13 @@ class LfunctionsParser(object):
     def read_vector_float(self, elt):
         if elt == '[]':
             return []
-        else:
-            return [RDF(x) for x in elt[1:-1].split(',')]
+        return [RDF(x) for x in elt[1:-1].split(',')]
+
     def read_origin_label(self, elt):
         return elt
 
-
     def read_root_number_acb(self, elt):
-        return self.from_acb2(*sum(atoii(elt, level=2),[]))
+        return self.from_acb2(*sum(atoii(elt, level=2), []))
 
     def read_order_of_vanishing(self, elt):
         return int(elt)
@@ -402,8 +409,8 @@ class LfunctionsParser(object):
         return self.from_arb2(*atoii(elt))
 
     def read_special_values_acb(self, elt):
-         values = [self.from_acb2(*sum(x,[])) for x in atoii(elt, level=3)]
-         return {i: elt for (i, elt) in enumerate(values, 1)}
+        values = [self.from_acb2(*sum(x, [])) for x in atoii(elt, level=3)]
+        return {i: elt for (i, elt) in enumerate(values, 1)}
 
     def read_positive_zeros_arb(self, elt):
         return [self.from_arb2(*x) for x in atoii(elt, level=2)]
@@ -423,17 +430,14 @@ class LfunctionsParser(object):
     def read_conductor(self, elt):
         return int(elt)
 
-
     def read_trace_hash(self, elt):
         return int(elt)
 
     def read_second_moment(self, elt):
         return RDF(elt).round()
 
-
     def read_line(self, elt, headers):
         return {k: getattr(self, 'read_' + k)(v) for k, v in zip(headers, strip(elt).split(self.sep))}
-
 
     def read_out_line(self, line):
         return self.read_line(line, self.out_headers)
@@ -458,8 +462,6 @@ class LfunctionsParser(object):
 
     def process_record(self, rec):
         yield rec
-
-
 
 
 class lfunction_element(object):
@@ -492,10 +494,10 @@ class lfunction_element(object):
     def __init__(self, data, from_db=False):
         self.algebraic = True
         self.coeff_info = None
-        self.dirichlet_coefficients = None # we prefer ai and euler_factors
+        self.dirichlet_coefficients = None  # we prefer ai and euler_factors
         self.credit = None
         self.group = None
-        self.st_group = None # we don't have the infrastructure to determine this on the fly
+        self.st_group = None  # we don't have the infrastructure to determine this on the fly
         self.symmetry_type = None
         self.sign_arg = None
         if from_db:
@@ -508,8 +510,6 @@ class lfunction_element(object):
         self.from_db = from_db
 
         self.__dict__.update(data)
-
-
 
         if 'leading_term_arb' in data:
             self.leading_term_mid, self.leading_term_rad = realball_to_mid_rad_str(self.leading_term_arb)
@@ -534,9 +534,8 @@ class lfunction_element(object):
             else:
                 arg = normalized_arg(self.root_number_acb)
 
-            #self.root_number_mid,  self.root_number_rad = complexball_to_mid_rad_str(self.root_number_acb)
+            # self.root_number_mid,  self.root_number_rad = complexball_to_mid_rad_str(self.root_number_acb)
             self.root_angle_mid, self.root_angle_rad = realball_to_mid_rad_str(arg)
-
 
         if 'special_values_acb' in data:
             if self.self_dual:
@@ -553,13 +552,13 @@ class lfunction_element(object):
             self.values = None
 
         if 'positive_zeros_arb' in data:
-            self.accuracy = self.precision = None # we are using balls
+            self.accuracy = self.precision = None  # we are using balls
             # we increase the radius to 2**-103 => 31 digits
             assert(len(self.positive_zeros_arb) <= 10)
             max_rad = 2**-103
             # doesn't change the radius if we pass a negative value
             z = [realball_to_mid_rad_str(elt.add_error(max_rad - elt.rad()))
-                                         for elt in self.positive_zeros_arb]
+                 for elt in self.positive_zeros_arb]
             self.positive_zeros_mid = '{%s}' % ','.join([elt[0] for elt in z])
             self.positive_zeros_rad = '{%s}' % ','.join([elt[1] for elt in z])
             R = RealIntervalField(self.positive_zeros_arb[0].mid().prec())
@@ -594,9 +593,6 @@ class lfunction_element(object):
     def positive_zeros_extra_arb(self):
         return [numeric_to_ball(elt) for elt in self.positive_zeros_extra]
 
-
-
-
     def __repr__(self):
         if getattr(self, 'label', None):
             return "L-function %s" % self.label
@@ -604,13 +600,11 @@ class lfunction_element(object):
             return "L-function obtained from %s" % self.origin_label
         return "L-function with degree %d and conductor %d" % (self.degree, self.conductor)
 
-
     def __eq__(self, other, pedantic=True):
         # first compare exact invariants
         for attr in ['prelabel', 'primitive', 'order_of_vanishing', 'motivic_weight']:
             if getattr(self, attr) != getattr(other, attr):
                 return False
-
 
         # before comparing zeros check if type and origins match
         if self.origin == other.origin and self.origin:
@@ -618,9 +612,6 @@ class lfunction_element(object):
             # the trace hash should be sufficient as comparison
             if self.trace_hash and other.trace_hash:
                 return self.trace_hash == other.trace_hash
-
-
-
 
         # non exact invariants
         if mod1(self.root_angle - other.root_angle) > 1e-7:
@@ -631,9 +622,8 @@ class lfunction_element(object):
         for i, (z, w) in enumerate(zip(self.positive_zeros_arb, other.positive_zeros_arb)):
             if not z.overlaps(w):
                 if self.primitive and i > 0:
-                    assert False, "we matched the first zero but not the %d-th" % (i+1)
+                    assert False, "we matched the first zero but not the %d-th" % (i + 1)
                 return False
-
 
         # compare hashes
 
@@ -643,7 +633,6 @@ class lfunction_element(object):
             # some we might be comparing trace_hash vs hash based on z1
             if self.Lhash == other.Lhash:
                 return True
-
 
         if self.trace_hash is not None and other.trace_hash is not None:
             if self.trace_hash != other.trace_hash:
@@ -660,11 +649,6 @@ class lfunction_element(object):
         else:
             return True
 
-
-
-
-
-
     def compute_factorization(self, possible_factors):
         # we are assuming that it factors with no repeated factors
         if not possible_factors:
@@ -679,7 +663,6 @@ class lfunction_element(object):
         degree = self.degree
         order_of_vanishing = self.order_of_vanishing
         zeros = self.positive_zeros_arb + self.positive_zeros_extra_arb
-
 
         def divides(elt):
             if not (conductor % elt.conductor == 0 and
@@ -703,12 +686,12 @@ class lfunction_element(object):
                     # and thus it will also be true for every other future w
                     if w > z:
                         if j > 0:
-                            assert False, "we matched the first zero but not the %d-th" % (j+1)
+                            assert False, "we matched the first zero but not the %d-th" % (j + 1)
                         return False
                 else:
                     # we got to the end of zeros
                     # and they were all smaller than z
-                    assert j > 0 # assuring at least a zero matched
+                    assert j > 0  # assuring at least a zero matched
                     break
             return True
 
@@ -759,8 +742,7 @@ class lfunction_element(object):
                     if degree == 0:
                         break
 
-
-        res =  sorted(res, key=lambda x: (x.degree, x.conductor, x.positive_zeros_arb[0]))
+        res = sorted(res, key=lambda x: (x.degree, x.conductor, x.positive_zeros_arb[0]))
         if degree == 0:
             self.factors_obj = res
             for elt in ['factors', 'Lhash', 'LhashArray']:
@@ -771,18 +753,11 @@ class lfunction_element(object):
             self.LhashArray = [self.Lhash]
             self.factors = [elt.label for elt in res] + [None]
 
-
-
-
-
-
-
-
     def merge_instances(self, other):
         # merge instances
         assert len(other.instance_types) == len(other.instance_urls)
         m = set(zip(self.instance_types + other.instance_types,
-                     self.instance_urls + other.instance_urls))
+                    self.instance_urls + other.instance_urls))
         self.instance_types, self.instance_urls = zip(*m)
         other.instance_types = self.instance_types
         other.instance_urls = self.instance_urls
@@ -795,7 +770,7 @@ class lfunction_element(object):
         assert len(factors) >= 1
         if len(factors) == 1:
             return factors[0]
-        factors.sort(key = lambda elt: (elt.degree, elt.conductor, elt.positive_zeros_arb[0]))
+        factors.sort(key=lambda elt: (elt.degree, elt.conductor, elt.positive_zeros_arb[0]))
         data['degree'] = sum(elt.degree for elt in factors)
         data['conductor'] = prod(elt.conductor for elt in factors)
         data['factors_obj'] = factors
@@ -805,7 +780,6 @@ class lfunction_element(object):
         data['poles'] = sorted(list(set(sum([elt.poles for elt in factors], []))))
         data['primitive'] = False
 
-
         # Handle the zeros
         positive_zeros_arb = sum([elt.positive_zeros_arb for elt in factors], [])
         R = positive_zeros_arb[0].parent()
@@ -813,7 +787,7 @@ class lfunction_element(object):
         positive_zeros_arb.sort()
         data['positive_zeros_arb'] = positive_zeros_arb[:10]
         data['positive_zeros_extra'] = []
-        rh_limit = 64/data['degree']
+        rh_limit = 64 / data['degree']
         for elt in positive_zeros_arb[10:]:
             approx = approx_ball(elt)
             if elt is None or elt.mid() > rh_limit:
@@ -823,7 +797,6 @@ class lfunction_element(object):
 
         if all(getattr(elt, 'self_dual', False) for elt in factors):
             data['self_dual'] = True
-
 
         if all(getattr(elt, 'central_character', None) for elt in factors):
             data['central_character'] = prod_central_character([elt.central_character for elt in factors])
@@ -849,11 +822,11 @@ class lfunction_element(object):
             data['special_values_acb'] = {t: prod(elt.special_values_acb[t] for elt in factors) for t in at}
 
         if all(hasattr(elt, 'plot_delta') and hasattr(elt, 'plot_values') for elt in factors):
-            factor_plot_values = [ [ ( j * elt.plot_delta,  z) for j, z in enumerate(elt.plot_values) ] for elt in factors]
+            factor_plot_values = [[(j * elt.plot_delta, z) for j, z in enumerate(elt.plot_values)] for elt in factors]
             interpolations = [spline(elt) for elt in factor_plot_values]
-            plot_range = 64.0/data['degree']
+            plot_range = 64.0 / data['degree']
             # we cannot hope to get a finer resolution
-            data['plot_delta'] = plot_delta = max(plot_range/256, max(elt.plot_delta for elt in factors))
+            data['plot_delta'] = plot_delta = max(plot_range / 256, max(elt.plot_delta for elt in factors))
             # we also don't want to extrapolate data
             assert all(plot_range <= elt[-1][0] for elt in factor_plot_values), '%s %s' % (plot_range, [elt[-1][0] for elt in factor_plot_values])
             data['plot_values'] = [prod([elt(i) for elt in interpolations]) for i in srange(0, plot_range + plot_delta, plot_delta)]
@@ -922,15 +895,15 @@ class lfunction_element(object):
         GCcount = Counter(GC)
         # convert gamma_R to gamma_C
         for x in sorted(GRcount):
-            shift = min(GRcount[x], GRcount[x+1])
+            shift = min(GRcount[x], GRcount[x + 1])
             if shift:
                 # We store the real parts of nu doubled
                 GCcount[x] += shift
                 GRcount[x] -= shift
                 GRcount[x] -= shift
-        GR = sum([[m]*c for m, c in GRcount.items()], [])
-        GC = sum([[m]*c for m, c in GCcount.items()], [])
-        assert self.degree == len(GR) + 2*len(GC)
+        GR = sum([[m] * c for m, c in GRcount.items()], [])
+        GC = sum([[m] * c for m, c in GCcount.items()], [])
+        assert self.degree == len(GR) + 2 * len(GC)
         GR.sort(key=CCtuple)
         GC.sort(key=CCtuple)
 
@@ -941,17 +914,17 @@ class lfunction_element(object):
         GR_real = [elt.real() for elt in GR]
         GC_real = [elt.real() for elt in GC]
         self.mu_real = [x.round() for x in GR_real]
-        assert set(self.mu_real).issubset(set([0,1]))
-        self.nu_real_doubled = [(2*x).round() for x in GC_real]
+        assert set(self.mu_real).issubset(set([0, 1]))
+        self.nu_real_doubled = [(2 * x).round() for x in GC_real]
         GRcount = Counter(GR_real)
         GCcount = Counter(GC_real)
         ge = GCD(GCD(list(GRcount.values())), GCD(list(GCcount.values())))
         if ge > 1:
-            GR_real = sum(([k]*(v//ge) for k, v in GRcount.items()), [])
-            GC_real = sum(([k]*(v//ge) for k, v in GCcount.items()), [])
+            GR_real = sum(([k] * (v // ge) for k, v in GRcount.items()), [])
+            GC_real = sum(([k] * (v // ge) for k, v in GCcount.items()), [])
 
-        rs = ''.join(['r%d' % elt.real().round() for elt in GR_real])
-        cs = ''.join(['c%d' % (elt.real()*2).round() for elt in GC_real])
+        rs = ''.join('r%d' % elt.real().round() for elt in GR_real)
+        cs = ''.join('c%d' % (elt.real() * 2).round() for elt in GC_real)
         gammas = "-" + rs + cs
         if ge > 1:
             gammas += "e%d" % ge
@@ -969,16 +942,14 @@ class lfunction_element(object):
                         continue
                     end += spectral_str(elt.imag(), conjugate=conjugate)
         # these are stored in algebraic normalization
-        self.gamma_factors = [[elt -  self.analytic_normalization for elt in G]
+        self.gamma_factors = [[elt - self.analytic_normalization for elt in G]
                               for G in [GR, GC]]
         self.spectral_label = gammas + end
         return beginning + gammas + end
 
-
     @lazy_attribute
     def st_group(self):
         return None
-
 
     @lazy_attribute
     def Lhash(self):
@@ -1009,13 +980,11 @@ class lfunction_element(object):
         if self.primitive and hasattr(self, 'label'):
             return [self.label]
         if hasattr(self, 'factors_obj') and all(getattr(elt, 'label', None) for elt in self.factors_obj):
-            return sum([elt.factors for elt in self.factors_obj],[])
-
-
+            return sum([elt.factors for elt in self.factors_obj], [])
 
     @lazy_attribute
     def analytic_normalization(self):
-        return 0.5*self.motivic_weight
+        return 0.5 * self.motivic_weight
 
     def set_dirichlet(self):
         assert len(self.euler_factors) >= 4
@@ -1029,48 +998,40 @@ class lfunction_element(object):
         self.set_dirichlet()
         return self.__dict__['a2']
 
-
     @lazy_attribute
     def a3(self):
         self.set_dirichlet()
         return self.__dict__['a3']
-
 
     @lazy_attribute
     def a4(self):
         self.set_dirichlet()
         return self.__dict__['a4']
 
-
     @lazy_attribute
     def a5(self):
         self.set_dirichlet()
         return self.__dict__['a5']
-
 
     @lazy_attribute
     def a6(self):
         self.set_dirichlet()
         return self.__dict__['a6']
 
-
     @lazy_attribute
     def a7(self):
         self.set_dirichlet()
         return self.__dict__['a7']
-
 
     @lazy_attribute
     def a8(self):
         self.set_dirichlet()
         return self.__dict__['a8']
 
-
     @lazy_attribute
     def a9(self):
         self.set_dirichlet()
         return self.__dict__['a9']
-
 
     @lazy_attribute
     def a10(self):
@@ -1087,22 +1048,18 @@ class lfunction_element(object):
     def root_analytic_conductor(self):
         return float(RDF(self.analytic_conductor).nth_root(self.degree))
 
-
     @lazy_attribute
     def bad_primes(self):
         return force_list_int(Integer(self.conductor).prime_divisors())
-
 
     @lazy_attribute
     def conductor_radical(self):
         return prod(self.bad_primes)
 
-
     @lazy_attribute
     def trace_hash(self):
         if hasattr(self, 'factors_obj') and all(getattr(elt, 'trace_hash', None) for elt in self.factors_obj):
-            return sum(elt.trace_hash for elt in self.factors_obj) % 0x1FFFFFFFFFFFFFFF # mod 2^61 - 1
-
+            return sum(elt.trace_hash for elt in self.factors_obj) % 0x1FFFFFFFFFFFFFFF  # mod 2^61 - 1
 
     @lazy_attribute
     def orbit(self):
@@ -1111,7 +1068,6 @@ class lfunction_element(object):
     @lazy_attribute
     def factors_inv(self):
         return []
-
 
     @lazy_attribute
     def euler_factors_factorization(self):
@@ -1126,12 +1082,9 @@ class lfunction_element(object):
             # if the factor is -1+T^2, replace it by 1-T^2
             # this should happen an even number of times, mod powers
             out = [[-g if g[0] == -1 else g, e] for g, e in facts]
-            assert prod( g**e for g, e in out ) == poly, "%s != %s" % (prod( [g**e] for g, e in out ), poly)
-            return [[g.list(), e] for g,e  in out]
+            assert prod(g**e for g, e in out) == poly, "%s != %s" % (prod([g**e] for g, e in out), poly)
+            return [[g.list(), e] for g, e in out]
         return force_list_int([factorization(elt) for elt in self.euler_factors])
-
-
-
 
 
 def tensor_charpoly(f, g):
@@ -1141,22 +1094,26 @@ def tensor_charpoly(f, g):
     B = R(g.homogenize(y))
     return B.resultant(A)
 
+
 def base_change(Lpoly, r):
     R = Lpoly.parent()
     T = R.gen()
     S = PolynomialRing(R, 'u')
     u = S.gen()
     return R(Lpoly(u).resultant(u**r - T))
+
+
 def sym_pol(L, n):
     Ln = L
     for i in range(2, n + 1):
         Ln = tensor_charpoly(Ln, L)
         b = base_change(L, i)
-        extra = (Ln//b).sqrt(2)
-        Ln = b*extra
+        extra = (Ln // b).sqrt(2)
+        Ln = b * extra
         if Ln[0] == -1:
             Ln *= -1
     return Ln
+
 
 @cached_function
 def sym_pol_gen(n):
@@ -1164,6 +1121,7 @@ def sym_pol_gen(n):
     R = PolynomialRing(S, "T")
     L = R("1 - a*T + p*T^2")
     return sym_pol(L, n).list()
+
 
 def sym_pol_ECQ(a, p, n):
     return [int(elt.substitute(a=a, p=p)) for elt in sym_pol_gen(n)]
@@ -1173,13 +1131,12 @@ class SmalljacParser(LfunctionsParser):
     ZZT = PolynomialRing(ZZ, "T")
     block_col = 2
 
-
     @classmethod
     def ef_multiply_by_riemann(cls, ef, p, power):
-        return cls.ZZT(ef)*cls.ZZT([1,-p**(power//2)])
+        return cls.ZZT(ef) * cls.ZZT([1, -p**(power // 2)])
 
     def __init__(self, load_key):
-        in_headers = in_headers ='origin_label:power:conductor:curve:hard_factors'.split(':')
+        in_headers = in_headers = 'origin_label:power:conductor:curve:hard_factors'.split(':')
         out_headers = 'origin_label:trace_hash:second_moment:root_number_acb:order_of_vanishing:leading_term_arb:special_values_acb:positive_zeros_arb:positive_zeros_extra:plot_delta:plot_values'.split(':')
         self.load_key = load_key
         LfunctionsParser.__init__(self, in_headers, out_headers)
@@ -1194,14 +1151,13 @@ class SmalljacParser(LfunctionsParser):
             'central_character': '1.1',
         }
 
-
     def process_record(self, rec):
         if rec.ECcmmod4:
             res = dict(self.res_constant)
             res['euler_factors'] = force_list_int([self.ef_multiply_by_riemann(elt, p, rec.power) for p, elt in zip(primes_first_n(len(rec.euler_factors)), rec.euler_factors)])
             res['bad_lfactors'] = force_list_int([[p, self.ef_multiply_by_riemann(elt, p, rec.power)] for p, elt in rec.bad_lfactors])
-            recrh =  lfunction_element.from_factors(
-                [rec, riemann(rec.power//2)],
+            recrh = lfunction_element.from_factors(
+                [rec, riemann(rec.power // 2)],
                 res
             )
             # move types and urls to the righteous L-func
@@ -1210,9 +1166,6 @@ class SmalljacParser(LfunctionsParser):
             recrh.origin = rec.origin
             yield recrh
         yield rec
-
-
-
 
     def read_curve(self, s):
         if '/' in s:
@@ -1231,7 +1184,7 @@ class SmalljacParser(LfunctionsParser):
                 return HyperellipticCurve(f, h)
             else:
                 raise NotImplementedError("only implemented for genus 1 with ainvs")
-        else: #ECQ
+        else:  # ECQ
             return EllipticCurve(atoii(s))
 
     def read_hard_factors(self, s):
@@ -1244,7 +1197,6 @@ class SmalljacParser(LfunctionsParser):
         # if base field != QQ, some primes might repeated, but in that case we will compute all euler factors directly
         return dict(zip(primes, factors))
 
-
     def read_power(self, s):
         return int(s)
 
@@ -1256,13 +1208,13 @@ class SmalljacParser(LfunctionsParser):
         res.update(out_res)
 
         res['motivic_weight'] = res['power']
-        res['ECcmmod4'] = False #  overwritten later
+        res['ECcmmod4'] = False  # overwritten later
         if res['power'] > 1:
             assert res['curve'].genus() == 1
             res['degree'] = res['power'] + 1
-            u = ceil(res['power']/2)
-            res['gamma_factors'] = [([-2*floor(u/2)] if res['power']%2 == 0 else []),
-                                    sorted([-elt for elt in range(0, u)])]
+            u = ceil(res['power'] / 2)
+            res['gamma_factors'] = [([-2 * (u // 2)] if res['power'] % 2 == 0 else []),
+                                    sorted([-elt for elt in range(u)])]
             if res['power'] % 4 == 0 and res['curve'].has_cm():
                 res['ECcmmod4'] = True
                 # account for the missing Riemann zeta factor
@@ -1271,8 +1223,8 @@ class SmalljacParser(LfunctionsParser):
         else:
             g = res['curve'].genus()
             d = res['curve'].base_ring().degree()
-            res['degree'] = 2*g*d
-            res['gamma_factors'] = [[], [0]*g*d]
+            res['degree'] = 2 * g * d
+            res['gamma_factors'] = [[], [0] * g * d]
 
         # pin down root_number
         assert res['root_number_acb'].contains_integer()
@@ -1280,28 +1232,22 @@ class SmalljacParser(LfunctionsParser):
         assert res['root_number_acb'] in [1, -1]
         res['root_angle'] = 0 if res['root_number_acb'] == 1 else 0.5
 
-
         return smalljac(res)
-
 
 
 class smalljac(lfunction_element):
     def __init__(self, data):
         lfunction_element.__init__(self, data)
 
-
     @lazy_attribute
     def euler_factors(self):
         self.set_euler_factors()
         return self.euler_factors
 
-
     @lazy_attribute
     def bad_lfactors(self):
         self.set_euler_factors()
         return self.bad_lfactors
-
-
 
     def set_euler_factors(self):
         # Sets:
@@ -1316,9 +1262,10 @@ class smalljac(lfunction_element):
             K = E.base_field()
             if K == QQ:
                 N = E.conductor()
+
                 def get_euler_factor(p):
                     Ep = E.local_data(p)
-                    if N%p == 0:
+                    if N % p == 0:
                         Lp = 1 - Ep.bad_reduction_type() * T
                     else:
                         Lp = self.ZZT(Ep.minimal_model().change_ring(GF(p)).frobenius_polynomial()).reverse()
@@ -1326,15 +1273,16 @@ class smalljac(lfunction_element):
 
             else:
                 N = (E.conductor() * K.discriminant()).absolute_norm()
+
                 def get_euler_factor(p):
                     Lp = 1
                     for f, _ in K.fractional_ideal(p).factor():
                         if f.divides(E.conductor()):
                             local_factor = (1 - E.local_data(f).bad_reduction_type() * T)
-                            Lp *=  local_factor( T ** f.absolute_norm().valuation(p) )
+                            Lp *= local_factor(T ** f.absolute_norm().valuation(p))
                         else:
                             frob = self.ZZT(E.local_data(f).minimal_model().change_ring(f.residue_field()).frobenius_polynomial())
-                            Lp *= frob.reverse()( T ** f.absolute_norm().valuation(p) )
+                            Lp *= frob.reverse()(T ** f.absolute_norm().valuation(p))
                     return Lp
             assert N == self.conductor or power != 1
 
@@ -1345,12 +1293,12 @@ class smalljac(lfunction_element):
                 for p in prime_range(bound):
                     if p in self.hard_factors:
                         continue
-                    ma = get_euler_factor(p)[1] # -ap
-                    euler_factors[p] =sym_pol_ECQ(-ma, p, power)
+                    ma = get_euler_factor(p)[1]  # -ap
+                    euler_factors[p] = sym_pol_ECQ(-ma, p, power)
                 if self.ECcmmod4:
                     for p in euler_factors:
                         # euler_factors[p] might be a list
-                        euler_factors[p] = self.ZZT(euler_factors[p])//(1-T*p**(power//2))
+                        euler_factors[p] = self.ZZT(euler_factors[p]) // (1 - T * p**(power // 2))
 
             else:
                 euler_factors = {p: get_euler_factor(p) for p in prime_range(bound) + bad_primes}
@@ -1368,12 +1316,9 @@ class smalljac(lfunction_element):
         self.euler_factors = force_list_int([euler_factors[p] for p in prime_range(bound)])
         self.bad_lfactors = force_list_int([[p, euler_factors[p]] for p in bad_primes])
 
-
-
-
     @lazy_attribute
     def instance_types(self):
-        if  self.curve.genus() == 1:
+        if self.curve.genus() == 1:
             if self.curve.base_field().degree() == 1:
                 if self.power == 1:
                     return ['ECQ']
@@ -1383,7 +1328,7 @@ class smalljac(lfunction_element):
                 return ['ECNF']
         elif self.curve.genus() == 2:
             return ['G2Q']
-        raise NotImplementedError # another day
+        raise NotImplementedError  # another day
 
     @lazy_attribute
     def origin(self):
@@ -1408,13 +1353,11 @@ class smalljac(lfunction_element):
         elif self.curve.genus() == 2:
             assert len(self.origin_labe.split(".")) == 2
             return 'Genus2Curve/Q/' + self.origin_label.replace('.', '/')
-        raise NotImplementedError # another day
-
+        raise NotImplementedError  # another day
 
     @lazy_attribute
     def instance_urls(self):
         return [self.origin]
-
 
     @lazy_attribute
     def primitive(self):
@@ -1425,7 +1368,6 @@ class smalljac(lfunction_element):
                 return False
         return True if self.second_moment == 1 else False
 
-
     @lazy_attribute
     def rational(self):
         return True
@@ -1434,6 +1376,7 @@ class smalljac(lfunction_element):
     def factors_inv(self):
         if not (self.curve.genus() == 1 and self.curve.has_cm() and self.power > 1):
             return None
+
         # calls Magma to get the conductor to deduce the various invariants to pindown the factors
         def magma_Lfunction_fac_sympower():
             return magma.Factorisation(magma.SymmetricPower(magma.LSeries(EllipticCurve(list(self.curve.ainvs()))), self.power))
@@ -1451,7 +1394,7 @@ class smalljac(lfunction_element):
                 shift = int(shift)
             else:
                 shift = 0
-            weight = weight - 2*shift
+            weight = weight - 2 * shift
 
             gamma = Counter([elt + shift for elt in gamma])
             mus, nus = [], []
@@ -1460,11 +1403,10 @@ class smalljac(lfunction_element):
                     if gamma[elt + 1] > 0:
                         gamma[elt] -= 1
                         gamma[elt + 1] -= 1
-                        nus.append(2*elt + weight)
+                        nus.append(2 * elt + weight)
                     else:
                         gamma[elt] -= 1
-                        mus.append(elt + weight//2)
-
+                        mus.append(elt + weight // 2)
 
             if 'Grossenchar power' in s:
                 for j, elt in [(1, '1st'), (2, '2nd'), (3, '3rd')] + [(i, str(i) + 'th') for i in range(4, 9)]:
@@ -1477,32 +1419,28 @@ class smalljac(lfunction_element):
             else:
                 degree = 2
 
-
             # if we knew the character we could get the prelabel
 
-
-            return {'label': {'$exists': True}, # we are doing this for the label
+            return {'label': {'$exists': True},  # we are doing this for the label
                     'degree': degree,
                     'conductor': conductor,
                     'motivic_weight': weight,
                     'rational': True,
                     'mu_real': mus,
-                    'mu_imag': [0]*len(mus),
+                    'mu_imag': [0] * len(mus),
                     'nu_real_doubled': nus,
-                    'nu_imag': [0]*len(nus),
+                    'nu_imag': [0] * len(nus),
                     'rational': True,
                     'primitive': True,
                     'algebraic': True,
                     }
 
-
-
         return [magma_Lfunction_inv(elt[1]) for elt in magma_Lfunction_fac_sympower()
-                      if 'Riemann zeta function' not in str(elt[1])]
+                if 'Riemann zeta function' not in str(elt[1])]
 
 
-#@cached_function
-#def second_moment_to_factors(m):
+# @cached_function
+# def second_moment_to_factors(m):
 #    """
 #    given the second moment of a representation, returns how it may factor
 #    """
@@ -1514,19 +1452,19 @@ class smalljac(lfunction_element):
 #    return res
 
 
-
 class artin(lfunction_element):
     def __init__(self):
         raise NotImplementedError
+
 
 class artin_orbit(artin):
     def __init__(self):
         raise NotImplementedError
 
 
-
 class lfunction_collection:
     sep = ':'
+
     @lazy_class_attribute
     def db(cls):
         from lmfdb import db
@@ -1535,9 +1473,6 @@ class lfunction_collection:
     @lazy_class_attribute
     def tables(cls):
         return [cls.db.lfunc_lfunctions, cls.db.lfunc_data]
-
-
-
 
     @classmethod
     def dbsearch(cls, query, projection):
@@ -1557,19 +1492,17 @@ class lfunction_collection:
                                         projection=list(sp.intersection(table.col_type))):
                     yield {k: elt.get(k) for k in sp}
 
-
     @lazy_class_attribute
     def lfunctions_schema(cls):
         return OrderedDict((k, cls.db.lfunc_data.col_type[k])
-                            for k in sorted(cls.db.lfunc_data.col_type)
-                            if k != 'id')
+                           for k in sorted(cls.db.lfunc_data.col_type)
+                           if k != 'id')
 
     @lazy_class_attribute
     def instances_schema(cls):
         return OrderedDict((k, cls.db.lfunc_instances.col_type[k])
-                            for k in sorted(cls.db.lfunc_instances.col_type)
-                            if k != 'id')
-
+                           for k in sorted(cls.db.lfunc_instances.col_type)
+                           if k != 'id')
 
     def __init__(self):
         self.lfunctions = defaultdict(list)
@@ -1578,10 +1511,6 @@ class lfunction_collection:
         self.instances = []
         self.total = 0
 
-
-
-
-
     def populate(self, iterator):
         # this is IO limited
         with Halo(text='Loading collection', spinner='dots') as spinner:
@@ -1589,7 +1518,7 @@ class lfunction_collection:
             for i, elt in enumerate(iterator, 1):
                 self.lfunctions[elt.prelabel].append(elt)
                 if time.time() - current > 1:
-                    rate = i/(time.time() - start_time)
+                    rate = i / (time.time() - start_time)
                     spinner.text = 'Loading collection: %.2f lines/second' % rate
                     current = time.time()
             old_total = self.total
@@ -1622,15 +1551,12 @@ class lfunction_collection:
             self.total = sum(map(len, self.lfunctions.values()))
             spinner.succeed('%d duplicates removed in %.2f seconds' % (old_total - self.total, time.time() - start_time))
 
-
-
-
     def _populate_label(self):
         info = 'Computing labels'
         with Halo(text=info, spinner='dots') as spinner:
             prelabels_chunks = chunkify([prelabel
-                                          for prelabel, objs in self.lfunctions.items()
-                                          if any(x.label is None for x in objs)])
+                                         for prelabel, objs in self.lfunctions.items()
+                                         if any(x.label is None for x in objs)])
 
             ct = 0
             start_time = time.time()
@@ -1638,7 +1564,7 @@ class lfunction_collection:
                 chunk = list(chunk)
                 spinner.text = info + progress_bar(ct, self.total, time.time() - start_time)
                 db_data = {elt: [] for elt in chunk}
-                #spinner.text = info + ': loading data from LMFDB'
+                # spinner.text = info + ': loading data from LMFDB'
                 for l in self.dbsearch(
                     {'prelabel': {'$in': chunk}, 'label': {'$exists': True}},
                         projection=lfunction_element.projection + ['origin', 'instance_types', 'instance_urls']):
@@ -1647,7 +1573,7 @@ class lfunction_collection:
                     objs = [lfunction_element(l, from_db=True) for l in objs]
                     indexes_taken = [x.index for x in objs] + [x.index for x in self.lfunctions[prelabel] if x.label]
                     nextindex = max(indexes_taken) + 1 if indexes_taken else 0
-                    assert nextindex == len(indexes_taken) # we should not have missing indexes
+                    assert nextindex == len(indexes_taken)  # we should not have missing indexes
                     for x in self.lfunctions[prelabel]:
                         ct += 1
                         if x.label:
@@ -1668,8 +1594,6 @@ class lfunction_collection:
                         x.label = '%s-%s' % (x.prelabel, x.index)
 
             spinner.succeed('Labels computed in %.2fs' % (time.time() - start_time,))
-
-
 
     def _populate_factors(self):
         projection = [
@@ -1703,7 +1627,7 @@ class lfunction_collection:
             ct = 0
             start_time = time.time()
 
-            #first go to the ones where we know the invariants
+            # first go to the ones where we know the invariants
             for obj in unknown_factors_inv:
                 ct += 1
                 obj.compute_factorization([
@@ -1713,27 +1637,23 @@ class lfunction_collection:
 
                 spinner.text = info + progress_bar(ct, total, time.time() - start_time)
 
-
             # this might be quite slow
             for (N, w, d), objs in unknown_factors.items():
                 if not N.is_prime():
-                    possible_factors = list(self.dbsearch( {
-                                            'label': {'$exists': True}, # we are doing this for the label
+                    possible_factors = list(self.dbsearch({
+                                            'label': {'$exists': True},  # we are doing this for the label
                                             'conductor': {'$in': N.divisors()[1:-1]},
-                                            'motivic_weight': {'$lte': w}, # we are also considering translations
+                                            'motivic_weight': {'$lte': w},  # we are also considering translations
                                             'degree': {'$lt': d},
                                             'primitive': True,
-                                            'algebraic': True,
-                                        },
-                                        projection=projection))
+                                            'algebraic': True},
+                                                          projection=projection))
                     for elt in objs:
                         ct += 1
                         elt.compute_factorization(possible_factors)
                 spinner.text = info + progress_bar(ct, total, time.time() - start_time)
 
             spinner.succeed('Factors computed in %.2fs' % (time.time() - start_time,))
-
-
 
     def orbits_collection(self):
         # generates a new collection from the orbits
@@ -1773,18 +1693,13 @@ class lfunction_collection:
                 spinner.text = info + progress_bar(ct, total, time.time() - start_time)
             spinner.succeed('New lfun_instances rows computed in %.2fs' % (time.time() - start_time,))
 
-
-
-
     def export(self, lfunctions_filename, instances_filename, overwrite=False, save_memory=False, headers=True):
         if not overwrite and (os.path.exists(lfunctions_filename) or os.path.exists(instances_filename)):
             raise ValueError("Files already exist")
 
-
         self._populate_label()
         self._populate_factors()
         self._populate_instances()
-
 
         sep = self.sep
         lfunctions_cols = list(self.lfunctions_schema)
@@ -1810,7 +1725,7 @@ class lfunction_collection:
                             for elt in objs) + '\n')
                     if save_memory:
                         objs.clear()
-                    if time.time() - current > 1: # slow down the updates
+                    if time.time() - current > 1:  # slow down the updates
                         spinner.text = info + progress_bar(ct, self.total, time.time() - start_time)
                         current = time.time()
 
@@ -1831,7 +1746,7 @@ class lfunction_collection:
                     # these are dictionaries
                     F.write(sep.join(json_dumps(elt.get(col), self.instances_schema[col]) for col in instances_cols))
                     F.write('\n')
-                    if time.time() - current > 1: # slow down the updates
+                    if time.time() - current > 1:  # slow down the updates
                         spinner.text = info + progress_bar(ct, total, time.time() - start_time)
                         current = time.time()
             spinner.succeed("Wrote %s in %.2f seconds" % (instances_filename, time.time() - start_time))
@@ -1839,7 +1754,7 @@ class lfunction_collection:
 
 class riemann(lfunction_element, CachedRepresentation):
     plot_range = 64
-    plot_delta = 1/128
+    plot_delta = 1 / 128
     degree = 1
     conductor = 1
     order_of_vanishing = 0
@@ -1850,12 +1765,13 @@ class riemann(lfunction_element, CachedRepresentation):
     self_dual = True
     primitive = True
     rational = True
+
     def __init__(self, shift):
         # trigger the computation of plot_values
         self.plot_values
         assert(self.positive_zeros_arb[0] in RBF('[14.13472514173469 +/- 5.52e-15]'))
-        self.motivic_weight = 2*shift
-        self.gamma_factors = [[-shift],[]]
+        self.motivic_weight = 2 * shift
+        self.gamma_factors = [[-shift], []]
         self.poles = [1 + shift]
         self.origin_label = 'zeta_%s' % shift
 
@@ -1865,20 +1781,18 @@ class riemann(lfunction_element, CachedRepresentation):
 
     @lazy_class_attribute
     def leading_term_arb(cls):
-        return -cls.RBF.zeta(Integer(1)/2)
+        return -cls.RBF.zeta(Integer(1) / 2)
 
     @lazy_attribute
     def special_values_acb(self):
         return {i: self.RBF.zeta(i) for i in range(2, 10)}
 
-
     @lazy_attribute
     def euler_factors(self):
         return [[1, - p**self.shift] for p in prime_range(self.euler_factors_bound)]
 
-
-    #@lazy_class_attribute
-    #def Z(cls):
+    # @lazy_class_attribute
+    # def Z(cls):
     #    # documentation |s| = s * sbar
     #    E = -1/8 # (1*(1/2 -1) + 0)/4 # in the documentation is divided by 2
     #    N = 1
@@ -1886,21 +1800,19 @@ class riemann(lfunction_element, CachedRepresentation):
     #    correction = lambda z: exp(1*z.imag()*z.arg()/2 -E*z.norm().log())*gammarabs(z)*N**(1/4)
     #    return lambda t: cls.zeta.hardy(t)/correction(t.parent().complex_field()(1/2, t))
 
-
-
     @lazy_class_attribute
     def plot_values(cls):
         def theta(t):
-            return CDF(0.25, t*0.5).gamma().arg() - t*CDF.pi().log()/2
+            return CDF(0.25, t * 0.5).gamma().arg() - t * CDF.pi().log() / 2
 
         def Z(t):
-            return (CDF(0, theta(t)).exp()*CDF(0.5, t).zeta()).real()
+            return (CDF(0, theta(t)).exp() * CDF(0.5, t).zeta()).real()
 
         return [Z(RDF(t)) for t in srange(0, cls.plot_range + cls.plot_delta, cls.plot_delta)]
 
     @lazy_class_attribute
     def positive_zeros_arb(cls):
-        old_prec = gp.set_precision(cls.RBF.precision()*log(2)/log(10) + 10)
+        old_prec = gp.set_precision(cls.RBF.precision() * log(2) / log(10) + 10)
         zeros = [cls.RBF(elt) for elt in gp.lfunzeros(gp.lfuninit(1, [13, 79]), [14, 78])]
         gp.set_precision(old_prec)
         return zeros
@@ -1915,7 +1827,7 @@ def split(fn_in, col, n, sep=LfunctionsParser.sep):
     if n == 1:
         return [(0, -1)]
     num_lines = sum(1 for line in open(fn_in))
-    desired_lines = (num_lines + n - 1)//n
+    desired_lines = (num_lines + n - 1) // n
     splits = []
     with open(fn_in) as iF:
         searching = False
@@ -1935,6 +1847,7 @@ def split(fn_in, col, n, sep=LfunctionsParser.sep):
             splits.append((begin, i + 1))
     return splits
 
+
 def stitch(main, suffixes):
     if suffixes:
         text = f"Stitching {main} "
@@ -1950,11 +1863,6 @@ def stitch(main, suffixes):
                     os.remove(filename)
             spinner.succeed(f'{main} stitched in in %.2fs' % (time.time() - start_time,))
     return True
-
-
-
-
-
 
 
 def parse_args():
@@ -1994,11 +1902,13 @@ def parse_args():
 
     return parser.parse_args()
 
+
 def do_block(C, fn_in, fn_out, fn_lfun, fn_ins, begin, end):
     L = lfunction_collection()
     L.populate(C.read_files(fn_in, fn_out, begin, end))
-    L.export(fn_lfun, fn_ins, overwrite=True, save_memory=True, headers= begin == 0)
+    L.export(fn_lfun, fn_ins, overwrite=True, save_memory=True, headers=(begin == 0))
     return True
+
 
 def do_block_Popen(args, j, begin, end):
     suffix = '' if begin == 0 else ('_%d' % begin)
@@ -2017,8 +1927,9 @@ def do_block_Popen(args, j, begin, end):
 
 
 def Halo_wrap_Popen(args, j):
-    color = ['grey', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white'][j%8]
+    color = ['grey', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white'][j % 8]
     prefix = f'{j}:'
+
     def non_block_read(output):
         ''' even in a thread, a normal read with block until the buffer is full '''
         fd = output.fileno()
@@ -2030,7 +1941,7 @@ def Halo_wrap_Popen(args, j):
             return ''
 
     def Spinner(message):
-        return  Halo(prefix + message, spinner="dots", color=color)
+        return Halo(prefix + message, spinner="dots", color=color)
 
     def spinner_text(spinner, output, message):
         last = ''
@@ -2052,7 +1963,6 @@ def Halo_wrap_Popen(args, j):
                 else:
                     spinner.text = prefix + last
         return spinner
-
 
     foo = subprocess.Popen(args,
                            stdout=subprocess.PIPE,
@@ -2077,9 +1987,6 @@ def Halo_wrap_Popen(args, j):
     return foo.returncode
 
 
-
-
-
 if __name__ == "__main__":
     args = parse_args()
     os.sys.path.append(args.lmfdb)
@@ -2096,15 +2003,14 @@ if __name__ == "__main__":
     sys.stderr = stderr
     C = globals()[args.class_name](*args.class_args)
 
-
     if args.jobs == 1:
         do_block(C, args.input, args.output,
                  args.lfunc_data, args.lfunc_instances, args.begin, args.end)
 
     else:
-        assert (args.begin, args.end) == (0,-1)
+        assert (args.begin, args.end) == (0, -1)
         print('Running %d jobs' % args.jobs)
-        splits = split(args.input, C.block_col,  args.jobs)
+        splits = split(args.input, C.block_col, args.jobs)
         jobs = []
         with ThreadPoolExecutor(max_workers=args.jobs) as e:
             for j, (begin, end) in enumerate(splits, 1):
@@ -2122,11 +2028,3 @@ if __name__ == "__main__":
         for i, j in enumerate(jobs):
             if not j.result():
                 raise ValueError(f'Something went wrong with {i}')
-
-
-
-
-
-
-
-
