@@ -1,15 +1,12 @@
+import sys
 
-import re, sys
-from six import string_types
-from collections import Counter
-from sage.all import psi, cached_function, ZZ, RR, GCD, ceil, RealField, ComplexField, CDF, walltime, floor
+from sage.all import ZZ, RR, ceil, RealField, ComplexField, walltime
 try:
     from sage.rings.complex_mpfr import ComplexNumber
 except ModuleNotFoundError:
     from sage.rings.complex_number import ComplexNumber
 from sage.rings.real_mpfr import RealLiteral
-#from lmfdb.backend.encoding import LmfdbRealLiteral
-from dirichlet_conrey import DirichletGroup_conrey, DirichletCharacter_conrey
+
 
 # This code comes from lmfdb.backend.encoding, but we don't want to import the lmfdb (in order to avoid db connection time)
 class LmfdbRealLiteral(RealLiteral):
@@ -18,12 +15,14 @@ class LmfdbRealLiteral(RealLiteral):
     """
 
     def __init__(self, parent, x=0, base=10):
-        if not isinstance(x, string_types):
+        if not isinstance(x, str):
             x = str(x)
         RealLiteral.__init__(self, parent, x, base)
 
     def __repr__(self):
         return self.literal
+
+
 def load(x, H, T):
     try:
         if x == r'\N':
@@ -49,7 +48,7 @@ def load(x, H, T):
         else:
             raise RuntimeError((x, H, T))
     except Exception as e:
-        print(x,H,T)
+        print(x, H, T)
         raise e
 
 
@@ -61,9 +60,9 @@ def process_line(line, HEADER, TYPES):
 
 
 def find_prec(s):
-    if isinstance(s, string_types):
+    if isinstance(s, str):
         # strip negatives and exponent
-        s = s.replace("-","")
+        s = s.replace("-", "")
         if "e" in s:
             s = s[:s.find("e")]
         return ceil(len(s) * 3.322)
@@ -74,18 +73,19 @@ def find_prec(s):
             return 53
 
 
-def hash_compare(x,y):
+def hash_compare(x, y):
     if x['Lhash'] == y['Lhash']:
         return True
     # use origin to compare L-functions originating from modular forms
     # as there are trace collisions for not small degree
-    if all(elt['origin'].startswith('ModularForm/GL2/Q/holomorphic/') for elt in [x,y]):
+    if all(elt['origin'].startswith('ModularForm/GL2/Q/holomorphic/')
+           for elt in [x, y]):
         # The Lhash is different, so they must differ
         assert x['origin'] != y['origin'] and not invariants_compare(x, y), "%s\n%s\n" % (x, y)
         return False
     if x['trace_hash'] is not None and y['trace_hash'] is not None:
         if x['trace_hash'] == y['trace_hash']:
-            assert invariants_compare(x,y), "%s\n%s\n" % (x, y)
+            assert invariants_compare(x, y), "%s\n%s\n" % (x, y)
             return True
         else:
             return False
@@ -97,7 +97,7 @@ def invariants_compare(x, y):
         return False
     # check if z1s match
     # 3 = dot, and 2 digits due to possible truncation and what not
-    digits = min(len(str(elt['z1'])) for elt in [x,y]) - 3
+    digits = min(len(str(elt['z1'])) for elt in [x, y]) - 3
     if (x['z1'] - y['z1']).abs() > 10**-digits:
         return False
     if x['order_of_vanishing'] != y['order_of_vanishing']:
@@ -107,9 +107,10 @@ def invariants_compare(x, y):
     # all the invariants agree
     return True
 
+
 def compare(x, y):
     c = hash_compare(x, y)
-    if c is None: #the Lhash differs, but might still be the same L-function
+    if c is None:  # the Lhash differs, but might still be the same L-function
         if invariants_compare(x, y):
             return None
         else:
@@ -141,7 +142,7 @@ def compute_index(res):
                     if j > i:
                         # y doesn't have an index
                         continue
-                    else: # J < i
+                    else:  # J < i
                         assert invariants_compare(x, y)
                         print(x['origin'], y['origin'])
                         x['index'] = y['index']
@@ -159,7 +160,7 @@ def run(inputfilename, outputfilename):
     res = []
     with open(inputfilename) as F:
         with open(outputfilename, 'w') as W:
-            for i, line in enumerate(F.readlines(),1):
+            for i, line in enumerate(F.readlines(), 1):
                 if i == 1 and line.startswith('id|'):
                     HEADER = line.strip().split('|')
                     continue
@@ -180,7 +181,7 @@ def run(inputfilename, outputfilename):
                     res = [L]
                     previouslabel = L['prelabel']
                 if i % 24200 == 0:
-                    sys.stdout.write("%d (%.2f%%) lines done in %.2fs\tETA:%.2fs\n" % (i, i*100./24201375, walltime(start), (24201375 - i)*walltime(start)/i))
+                    sys.stdout.write("%d (%.2f%%) lines done in %.2fs\tETA:%.2fs\n" % (i, i * 100. / 24201375, walltime(start), (24201375 - i) * walltime(start) / i))
                     sys.stdout.flush()
             else:
                 compute_index(res)
@@ -190,4 +191,3 @@ def run(inputfilename, outputfilename):
 
 if __name__ == "__main__":
     run(sys.argv[1], sys.argv[2])
-
