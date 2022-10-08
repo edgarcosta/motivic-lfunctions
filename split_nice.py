@@ -1,8 +1,9 @@
 import sys
 
+
 def split(fn_in, fn_out, col, n, sep=':'):
     num_lines = sum(1 for line in open(fn_in))
-    desired_lines = (num_lines + n - 1)//n
+    desired_lines = (num_lines + n - 1) // n
     splits = []
     with open(fn_in) as iF:
         searching = False
@@ -15,13 +16,11 @@ def split(fn_in, fn_out, col, n, sep=':'):
             if searching:
                 newcol = line.split(sep)[col]
                 if newcol != oldcol:
-                    splits.append((begin, i-1))
+                    splits.append((begin, i - 1))
                     begin = i
                     searching = False
         else:
             splits.append((begin, i))
-
-
 
     with open(fn_in) as iF:
         with open(fn_out) as oF:
@@ -36,8 +35,6 @@ def split(fn_in, fn_out, col, n, sep=':'):
                                 break
 
 
-
-
 if __name__ == "__main__":
     try:
         fn_in = sys.argv[1]
@@ -48,5 +45,3 @@ if __name__ == "__main__":
         print('Usage: %s input_filename output_filename col n')
         exit()
     split(fn_in, fn_out, col, n)
-
-
