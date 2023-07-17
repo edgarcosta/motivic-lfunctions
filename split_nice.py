@@ -42,6 +42,6 @@ if __name__ == "__main__":
         col = int(sys.argv[3])
         n = int(sys.argv[4])
     except IndexError:
-        print('Usage: %s input_filename output_filename col n')
+        print(f'Usage: {sys.argv[0]} input_filename output_filename col n')
         exit()
     split(fn_in, fn_out, col, n)
