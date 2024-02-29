@@ -229,7 +229,7 @@ def make_label(L, normalized=False):
     GR_real = [elt.real() for elt in GR]
     GC_real = [elt.real() for elt in GC]
     L["mu_real"] = [x.round() for x in GR_real]
-    assert set(L["mu_real"]).issubset(set([0,1]))
+    assert set(L["mu_real"]).issubset({0,1})
     L["nu_real_doubled"] = [(2*x).round() for x in GC_real]
     GRcount = Counter(GR_real)
     GCcount = Counter(GC_real)
