@@ -410,7 +410,7 @@ class LfunctionsParser(object):
 
     def read_special_values_acb(self, elt):
         values = [self.from_acb2(*sum(x, [])) for x in atoii(elt, level=3)]
-        return {i: elt for (i, elt) in enumerate(values, 1)}
+        return dict(enumerate(values, 1))
 
     def read_positive_zeros_arb(self, elt):
         return [self.from_arb2(*x) for x in atoii(elt, level=2)]
@@ -777,7 +777,7 @@ class lfunction_element(object):
         data['motivic_weight'] = factors[0].motivic_weight
         assert all(data['motivic_weight'] == elt.motivic_weight for elt in factors)
         data['order_of_vanishing'] = sum(elt.order_of_vanishing for elt in factors)
-        data['poles'] = sorted(list(set(sum([elt.poles for elt in factors], []))))
+        data['poles'] = sorted(set(sum([elt.poles for elt in factors], [])))
         data['primitive'] = False
 
         # Handle the zeros
@@ -914,7 +914,7 @@ class lfunction_element(object):
         GR_real = [elt.real() for elt in GR]
         GC_real = [elt.real() for elt in GC]
         self.mu_real = [x.round() for x in GR_real]
-        assert set(self.mu_real).issubset(set([0, 1]))
+        assert set(self.mu_real).issubset({0, 1})
         self.nu_real_doubled = [(2 * x).round() for x in GC_real]
         GRcount = Counter(GR_real)
         GCcount = Counter(GC_real)
@@ -1614,7 +1614,7 @@ class lfunction_collection:
         unknown_factors_inv = []
         info = 'Computing factors'
         with Halo(text=info, spinner='dots') as spinner:
-            for prelabel, objs in self.lfunctions.items():
+            for objs in self.lfunctions.values():
                 for elt in objs:
                     if elt.primitive or hasattr(elt, 'factors_obj') or elt.factors:
                         continue
@@ -1715,7 +1715,7 @@ class lfunction_collection:
                     F.write(sep.join([self.lfunctions_schema[col] for col in lfunctions_cols]))
                     F.write("\n\n")
                 ct = 0
-                for _, objs in self.lfunctions.items():
+                for objs in self.lfunctions.values():
                     ct += len(objs)
                     F.write(
                         '\n'.join(
