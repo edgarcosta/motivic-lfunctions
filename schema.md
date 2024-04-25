@@ -4,10 +4,9 @@ Search table: lfunc_search
 
 | Field | type | description |
 |----------|    ------     | ----- |
-origin                        |text                | **to be removed**
 primitive                     |boolean             | true if L-func is [primitive], we use the second moment in many instances to decide this
 conductor                     |numeric             | the [conductor] of the L-func
-central_character             |text                | the conrey label of the primitive character that induces the [central character] of modulus equal the conductor
+central_character_prim        |text                | the conrey label of the primitive character that induces the [central character] of modulus equal the conductor
 self_dual                     |boolean             | true if L-func is self-dual, i.e., all Dirichlet coefficients are real
 motivic_weight                |smallint            | the [motivic weight] of the L-func
 degree                        |smallint            | the [degree] of the L-func
@@ -27,14 +26,13 @@ label                         |text                | the [label] of the lfunc, e
 index                         |smallint            | the last component of the [label]
 conductor_radical             |bigint              | product of the bad_primes, i.e., the primes dividing the [conductor]
 dirichlet_coefficients        |numeric[]           | the [Dirichlet coefficients] for rational L-functions in arithmetic normalisation starting with a_1
-euler_factors                 |numeric[]           | **to be removed??**
 rational                      |boolean             | if the [Dirichlet coefficients] in arithmetic normalisation are rational
-euler{p}                      |numeric[]           | arrays of length degree + 1 representing the [euler factors] for p = 2, 3, 5,..., 97
+euler{p}                      |numeric[]           | arrays of length degree + 1 representing the [euler factors] for p = 2, 3, 5,..., 97 (only for rational L-functions)
 root_analytic_conductor       |double precision    | the [root analytic conductor]
 instance_types                |text[]              | representing the keys of the multimap url(type) -> url(instance)
 instance_urls                 |text[]              | representing the values of the multimap url(type) -> url(instance)
 spectral_label                |text                | the [spectral label], e.g. r0e3-p4.23p33.33m37.56
-is_instance_{type}            |boolean             | type in {Artin,BMF,CMF,DIR,ECQ,ECQSymPower,ECNF,G2Q,HMF,MaassGL3,MaassGL4,MaassGSp4,NF}
+is_instance_{type}            |boolean             | type in {Artin,BMF,CMF,DIR,ECQ,ECQSymPower,ECNF,G2Q,HMF,MaassGL3,MaassGL4,MaassGSp4,NF,HGM,ECQSymPower}
 
 
 
@@ -46,50 +44,29 @@ Data table: lfunc_table
 ____________
 | Field | type | description |
 |----------|    ------     | ----- |
-algebraic                     |boolean             | ^
-analytic_conductor            |double precision    | ^
-bad_lfactors                  |jsonb               | euler factors for the bad primes as an array of [p, [1, -ap, ...]]
-bad_primes                    |bigint[]            | ^
-central_character             |text                | ^
-conductor                     |numeric             | ^
-conductor_radical             |bigint              | ^
+bad_lfactors                  |jsonb               | euler factors for the bad primes as an array of [p, [1, -ap, ...]], if p is larger than 100
 conjugate                     |text                | the [label] of the conjugate L-function, if self dual then None
-degree                        |smallint            | ^
-euler_factors                 |jsonb               | the first [euler factors] stored as array of lists, if the L-func is not rational, we represent each coefficient as pair of doubles corresponding to the real, imaginary pair. We need jsonb to be able to handle
-euler_factors_factorization   |jsonb               | if the L-func is rational of degree larger than 4, we store the factorisation of the euler_factors
+euler_factors                 |jsonb               | the first [euler factors] stored as array of lists, if the L-func is not rational, we represent each coefficient as pair of doubles corresponding to the real, imaginary pair. We need jsonb in order to support different formats in the same column.  Store for p < 100.
+euler_factors_factorization   |jsonb               | if the L-func is rational of degree larger than 4, we store the factorisation of the euler_factors.  Need jsonb since factors can have different lengths
 factors                       |text[]              | an array with the labels of the primitive factors (potentially repeated), where the last entry will be Null if we don't know the full factorization
 index                         |smallint            | the last component of the label
-instance_types                |text[]              | ^
-instance_urls                 |text[]              | ^
-label                         |text                | ^
+label                         |text                | the [label] of the lfunc, e.g.: 3-1-1.1-r0e3-p4.23p33.33m37.56-0
 leading_term_mid              |numeric             | the mid point of the leading term of the Taylor expansion of the L-function centered at t = 0 on the critical line
 leading_term_rad              |float8              | the radious point of the leading term of the Taylor expansion of the L-function centered at t = 0 on the critical line
 load_key                      |text                | a string marking the upload
-motivic_weight                |smallint            | ^
-mu_imag                       |numeric[]           | ^
-mu_real                       |smallint[]          | ^
-nu_imag                       |numeric[]           | ^
-nu_real_doubled               |smallint[]          | ^
-order_of_vanishing            |smallint            | ^
 origin                        |text                | url for the object that was use to generated this data
-plot_delta                    |float4              | the spacing of the plot_values
-plot_values                   |float4[]            | the values of the Z function spaced by plot_delta, i.e., plot_values = [Z(k*plot_delta) for k in range(len(plot_delta))]
+plot_x                        |float4[]            | x-coordinates for local minima and local maxima of the [Z-function] (only for non-negative x)
+plot_y                        |float4[]            | y-coordinates for the local minima and local maxima of the [Z-function] at the values of plot_x
+plot_deriv                    |float4[]            | a list of length equal to the list of zeros given in positive_zeros_mid and positive_zeros_extra, giving the first derivative at each 0
 poles                         |float8[]            | location of the poles in arithmetic normalization
 positive_zeros_mid            |numeric[]           | the midpoint of the first zeros, at most 10, represented as a ball
 positive_zeros_rad            |float8[]            | the radious of the first zeros, at most 10, represented as a ball
-positive_zeros_extra          |float8[]            | the remaining zeros via their correct double approximation
-prelabel                      |text                | ^
-primitive                     |boolean             | ^
-rational                      |boolean             | ^
-root_analytic_conductor       |double precision    | ^
+positive_zeros_extra          |float8[]            | the remaining zeros via their correct double approximation.  These should be stored as far as we want the plot to extend.
 root_angle_mid                |numeric             | the mid point of the argument of [root number] normalized between -.5 to .5
 root_angle_rad                |float8                | the radious point of the argument of [root number] normalized between -.5 to .5
-self_dual                     |boolean             | ^
 special_values_at             |float8[]            | an array of t's where L(t) has been computed as a ball, t is in analytic normalization
 special_values_mid            |numeric[]           | the mid point of L(t)
 special_values_rad            |float8[]              | the radious of L(t)
-spectral_label                |text                | ^
-trace_hash                    |bigint              | ^
 z1                            |numeric             | the first zero where all the last digit may have an error of +-1, e.g., we could represent pi as 3.1416
 
 
@@ -110,9 +87,11 @@ z1                            |numeric             | the first zero where all th
 [root analytic conductor]: https://beta.lmfdb.org/knowledge/show/lfunction.root_analytic_conductor
 [root number]: https://beta.lmfdb.org/knowledge/show/lfunction.sign
 [spectral label]: https://beta.lmfdb.org/knowledge/show/lfunction.spectral_label
+[Z-function]: https://beta.lmfdb.org/knowledge/show/lfunction.zfunction
 
+Old plot info
+-------------
 
-TODO:
-- add column is_instance_ECQSymPower
-- central_character -> central_character_prim
+* plot_delta (float4): the spacing of the plot_values
+* plot_values (float4[]): the values of the Z function spaced by plot_delta, i.e., plot_values = [Z(k*plot_delta) for k in range(len(plot_delta))]
 
