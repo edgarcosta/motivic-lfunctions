@@ -12,7 +12,7 @@ motivic_weight                |smallint            | the [motivic weight] of the
 degree                        |smallint            | the [degree] of the L-func
 order_of_vanishing            |smallint            | the [analytic rank], the order of vanishing at its central point
 algebraic                     |boolean             | if the L-func is [arithmetic], i.e. normalized [Dirichlet coefficients] are algebraic numbers, conjecturally this is the same as being algebraic
-z1                            |numeric             | the [lowest zero]
+z1                            |numeric             | the [lowest zero] (the last digit may have an error of +-1, e.g., we could represent pi as 3.1416)
 trace_hash                    |bigint              | linear combination of the a_p between 2^12 and 2^13 reduced mod 2^61-1 as defined in Section 4.3 of [BSSVY](https://arxiv.org/abs/1602.03715), only for rational L-functions
 root_angle                    |double precision    | the argument of [root number] normalized between -.5 to .5
 prelabel                      |text                | the label without the index
@@ -53,11 +53,11 @@ index                         |smallint            | the last component of the l
 label                         |text                | the [label] of the lfunc, e.g.: 3-1-1.1-r0e3-p4.23p33.33m37.56-0
 leading_term_mid              |numeric             | the mid point of the leading term of the Taylor expansion of the L-function centered at t = 0 on the critical line
 leading_term_rad              |float8              | the radious point of the leading term of the Taylor expansion of the L-function centered at t = 0 on the critical line
-load_key                      |text                | a string marking the upload
 origin                        |text                | url for the object that was use to generated this data
 plot_x                        |float4[]            | x-coordinates for local minima and local maxima of the [Z-function] (only for non-negative x)
 plot_y                        |float4[]            | y-coordinates for the local minima and local maxima of the [Z-function] at the values of plot_x
 plot_deriv                    |float4[]            | a list of length equal to the list of zeros given in positive_zeros_mid and positive_zeros_extra, giving the first derivative at each 0
+plot_extra                    |float4[]            | a list of triples [x,y,d], constraining y=L(x) and d=L'(x)
 poles                         |float8[]            | location of the poles in arithmetic normalization
 positive_zeros_mid            |numeric[]           | the midpoint of the first zeros, at most 10, represented as a ball
 positive_zeros_rad            |float8[]            | the radious of the first zeros, at most 10, represented as a ball
@@ -67,8 +67,6 @@ root_angle_rad                |float8                | the radious point of the 
 special_values_at             |float8[]            | an array of t's where L(t) has been computed as a ball, t is in analytic normalization
 special_values_mid            |numeric[]           | the mid point of L(t)
 special_values_rad            |float8[]              | the radious of L(t)
-z1                            |numeric             | the first zero where all the last digit may have an error of +-1, e.g., we could represent pi as 3.1416
-
 
 
 [Dirichlet coefficient]: https://beta.lmfdb.org/knowledge/show/lfunction.dirichlet_series
