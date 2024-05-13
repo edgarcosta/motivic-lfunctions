@@ -49,6 +49,7 @@ conjugate                     |text                | the [label] of the conjugat
 euler_factors                 |jsonb               | the first [euler factors] stored as array of lists, if the L-func is not rational, we represent each coefficient as pair of doubles corresponding to the real, imaginary pair. We need jsonb to support different formats in the same column.  Store for p < 100.
 euler_factors_factorization |jsonb | If the L-func is rational of a degree larger than 4, we store the factorization of the euler_factors.  Need jsonb since factors can have different lengths
 factors                       |text[]              | an array with the labels of the primitive factors (potentially repeated), where the last entry will be Null if we don't know the full factorization
+factors_shift                 |numeric[]           | store the array s where L(s) = L1(s+w1) L2(s + w2) ... Ln(s + wn), NULL if all zeros
 index                         |smallint            | the last component of the label
 label                         |text                | the [label] of the lfunc, e.g.: 3-1-1.1-r0e3-p4.23p33.33m37.56-0
 leading_term_mid              |numeric             | the midpoint of the leading term of the Taylor expansion of the L-function centered at t = 0 on the critical line
@@ -57,8 +58,7 @@ origin                        |text                | URL for the object that was
 plot_x                        |float4[]            | x-coordinates for local minima and local maxima of the [Z-function] (only for non-negative x)
 plot_y                        |float4[]            | y-coordinates for the local minima and local maxima of the [Z-function] at the values of plot_x
 plot_deriv                    |float4[]            | a list of length equal to the list of zeros given in positive_zeros_mid and positive_zeros_extra, giving the first derivative at each 0
-plot_extra                    |float4[]            | a list of triples [x,y,d], constraining y=L(x) and d=L'(x)
-poles                         |float8[]            | location of the poles in arithmetic normalization
+plot_extra                    |float4[]            | a list of triples [x,y,z], constraining y=Z(x) and z=dZ/dx (x)
 positive_zeros_mid            |numeric[]           | the midpoint of the first zeros, at most 10, represented as a ball
 positive_zeros_rad            |float8[]            | the radius of the first zeros, at most 10, represented as a ball
 positive_zeros_extra          |float8[]            | the remaining zeros via their correct double approximation.  These should be stored as far as we want the plot to extend.
