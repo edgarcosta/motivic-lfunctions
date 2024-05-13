@@ -402,7 +402,6 @@ class lfunction_element(object):
         from convert_plot import convert_plot
         self.plot_x, self.plot_y, self.plot_deriv, self.plot_extra = convert_plot(self.plot_values, self.positive_zeros_mid + self.positive_zeros_extra, self.order_of_vanishing, self.mu_imag, self.plot_delta, self.dual_plot_values, self.dual_zeros, self.dual_plot_delta)
 
-        # TODO:  positive_zeros_mid, positive_zeros_rad, positive_zeros_extra from positive_zeros (currently jsonb, stored as string) David Lowry-Duda
     @lazy_attribute
     def positive_zeros_mid(self):
         ret = [RR(zero) for zero in self.positive_zeros[:10]]
