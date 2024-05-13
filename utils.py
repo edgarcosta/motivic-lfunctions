@@ -1,3 +1,30 @@
+import ast
+import json
+import re
+from collections.abc import Iterable
+from dirichlet_conrey import DirichletGroup_conrey, DirichletCharacter_conrey
+from sage.all import (
+    Integer,
+    PolynomialRing,
+    PowerSeriesRing,
+    QQ,
+    RBF,
+    RDF,
+    RR,
+    RealBallField,
+    ZZ,
+    cached_function,
+    gcd,
+    next_prime,
+    prime_powers,
+    primes_first_n,
+    prod,
+    vector,
+)
+from sage.rings.real_arb import RealBall
+from sage.rings.real_double import RealDoubleElement
+from sage.rings.real_mpfr import RealLiteral, RealField, RealNumber
+
 
 lhash_regex = re.compile(r'^\d+([,]\d+)*$')
 ec_lmfdb_label_regex = re.compile(r'(\d+)\.([a-z]+)(\d*)')
