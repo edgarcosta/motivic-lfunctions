@@ -32,7 +32,7 @@ root_analytic_conductor       |double precision    | the [root analytic conducto
 instance_types                |text[]              | representing the keys of the multimap url(type) -> url(instance)
 instance_urls                 |text[]              | representing the values of the multimap url(type) -> url(instance)
 spectral_label                |text                | the [spectral label], e.g. r0e3-p4.23p33.33m37.56
-is_instance_{type}            |boolean             | type in {Artin,BMF,CMF,DIR,ECQ,ECQSymPower,ECNF,G2Q,HMF,MaassGL3,MaassGL4,MaassGSp4,NF,HGM,ECQSymPower}
+is_instance_{type}            |boolean             | type in {Artin,BMF,CMF,DIR,ECQ,ECQSymPower,ECNF,G2Q,HMF,MaassGL3,MaassGL4,MaassGSp4,NF,HGM}
 
 
 

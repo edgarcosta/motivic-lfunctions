@@ -463,7 +463,6 @@ class LfunctionsParser(object):
     def process_record(self, rec):
         yield rec
 
-
 class lfunction_element(object):
     # desired columns when creating object from db
     projection = [
@@ -492,6 +491,7 @@ class lfunction_element(object):
     ZZT = PolynomialRing(ZZ, "T")
 
     def __init__(self, data, from_db=False):
+        # TODO: Deal with loading data from multiple tables
         self.algebraic = True
         self.coeff_info = None
         self.dirichlet_coefficients = None  # we prefer ai and euler_factors
@@ -566,6 +566,41 @@ class lfunction_element(object):
             self.z1 = str(R(self.positive_zeros_arb[0]))[:-2]
             self.z2 = str(R(self.positive_zeros_arb[1]))[:-2]
             self.z3 = str(R(self.positive_zeros_arb[2]))[:-2]
+
+        # TODO:  update bad_lfactors (Dirichlet L-functions need to be massaged, only store for p > 100)
+
+
+        # TODO:  convert conjugate from Lhash to label
+
+
+        # TODO:  update euler_factors (check that data matches what we expect, only store for p < 100)
+
+
+        # CLAIM:  euler_factors_factorization is okay
+
+
+        # TODO:  create factors, check that degrees add up, maybe create more factorizations when only know them partially (data from lfunc_instances)
+
+
+        # CLAIM:  label, index are okay
+
+
+        # TODO:  leading_term_mid, leading_term_rad (process from leading_term)
+
+
+        # CLAIM:  origin is okay
+
+
+        # TODO:  plot_x, plot_y, plot_deriv, plot_extra from plot_values, plot_delta, pos_zeros
+
+
+        # TODO:  positive_zeros_mid, positive_zeros_rad, positive_zeros_extra from positive_zeros (currently jsonb, stored as string)
+
+
+        # TODO:  root_angle_mid, root_angle_rad from root_angle (currently double in interval [-0.5,0.5])
+
+
+        # TODO:  special_values_at, special_values_der_order, special_values_mid, special_values_rad from values (currently seems to only exist sometimes, at 1)
 
     @lazy_attribute
     def positive_zeros_arb(self):
