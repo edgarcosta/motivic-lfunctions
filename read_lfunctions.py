@@ -301,7 +301,8 @@ class lfunction_element(object):
     ZZT = PolynomialRing(ZZ, "T")
 
     def __init__(self, data, from_db=False):
-        # TODO: Deal with loading data from multiple tables
+        # TODO: Deal with loading data from multiple tables Edgar Costa
+        # TODO: Run on a sample that includes all instance types Edgar Costa
         self.algebraic = True
         self.coeff_info = None
         self.dirichlet_coefficients = None  # we prefer ai and euler_factors

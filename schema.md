@@ -66,7 +66,7 @@ root_angle_mid                |numeric             | the midpoint of the argumen
 root_angle_rad                |float8              | the radius point of the argument of [root number] normalized between -.5 to .5
 special_values_at             |float8[]            | an array of {ti} where L^(ki)(ti) has been computed as a ball, ti is in arithmetic normalization
 special_values_der_order      |smallint[]          | the ki on the line above
-special_values_mid            |numeric[]           | the midpoint of L^(ki)(ti)
+special_values_mid            |numeric[]           | the midpoint of L^(ki)(ti), stored either as a pair (giving real and imaginary part) or a single float (if all special values are real)
 special_values_rad            |float8[]            | the radius of L^(ki)(ti)
 
 
