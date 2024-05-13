@@ -394,9 +394,15 @@ class lfunction_element(object):
 
         # CLAIM:  label, index are okay
 
+    @lazy_attribute
+    def leading_term_mid(self):
+        return RR(self.leading_term)
 
-        # TODO:  leading_term_mid, leading_term_rad (process from leading_term)
-
+    @lazy_attribute
+    def leading_term_rad(self):
+        """Assume the last two digits are unknown."""
+        rad = 10**(-(len(self.leading_term.split('.')[-1]) - 2))
+        return rad
 
         # CLAIM:  origin is okay
 
