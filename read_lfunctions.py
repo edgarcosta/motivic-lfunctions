@@ -394,6 +394,28 @@ class lfunction_element(object):
 
         # CLAIM:  label, index are okay
 
+        # CLAIM:  origin is okay
+
+
+        # TODO:  positive_zeros_mid, positive_zeros_rad, positive_zeros_extra from positive_zeros (currently jsonb, stored as string)
+
+        self.dual_zeros = [float(x) for x in self.dual_positive_zeros]
+        from convert_plot import convert_plot
+        self.plot_x, self.plot_y, self.plot_deriv, self.plot_extra = convert_plot(self.plot_values, self.positive_zeros_mid + self.positive_zeros_extra, self.order_of_vanishing, self.mu_imag, self.plot_delta, self.dual_plot_values, self.dual_zeros, self.dual_plot_delta)
+
+        # TODO:  positive_zeros_mid, positive_zeros_rad, positive_zeros_extra from positive_zeros (currently jsonb, stored as string)
+    @lazy_attribute
+    def positive_zeros_mid(self):
+        ...
+
+    @lazy_attribute
+    def positive_zeros_rad(self):
+        ...
+
+    @lazy_attribute
+    def positive_zeros_extra(self):
+        ...
+
     @lazy_attribute
     def leading_term_mid(self):
         return RR(self.leading_term)
@@ -403,17 +425,6 @@ class lfunction_element(object):
         """Assume the last two digits are unknown."""
         rad = 10**(-(len(self.leading_term.split('.')[-1]) - 2))
         return rad
-
-        # CLAIM:  origin is okay
-
-
-        # TODO:  positive_zeros_mid, positive_zeros_rad, positive_zeros_extra from positive_zeros (currently jsonb, stored as string)
-
-
-        self.dual_zeros = [float(x) for x in self.dual_positive_zeros]
-        from convert_plot import convert_plot
-        self.plot_x, self.plot_y, self.plot_deriv, self.plot_extra = convert_plot(self.plot_values, self.positive_zeros_mid + self.positive_zeros_extra, self.order_of_vanishing, self.mu_imag, self.plot_delta, self.dual_plot_values, self.dual_zeros, self.dual_plot_delta)
-
 
         # TODO:  root_angle_mid, root_angle_rad from root_angle (currently double in interval [-0.5,0.5])
 
