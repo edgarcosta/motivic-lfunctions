@@ -1,3 +1,4 @@
+from itertools import islice
 
 
 def progress_bar(current, total, time, barLength=10):

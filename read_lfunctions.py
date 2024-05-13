@@ -13,7 +13,6 @@ from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from dirichlet_conrey import DirichletGroup_conrey, DirichletCharacter_conrey
 from halo import Halo
-from itertools import islice
 from sage.all import (
     CDF,
     ComplexBallField,
