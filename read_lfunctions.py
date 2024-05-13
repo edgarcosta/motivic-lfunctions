@@ -1271,9 +1271,6 @@ class SmalljacParser(LfunctionsParser):
 
 
 class smalljac(lfunction_element):
-    def __init__(self, data):
-        lfunction_element.__init__(self, data)
-
     @lazy_attribute
     def euler_factors(self):
         self.set_euler_factors()
