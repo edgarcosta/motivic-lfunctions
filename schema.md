@@ -58,15 +58,16 @@ origin                        |text                | URL for the object that was
 plot_x                        |float4[]            | x-coordinates for local minima and local maxima of the [Z-function] (only for non-negative x)
 plot_y                        |float4[]            | y-coordinates for the local minima and local maxima of the [Z-function] at the values of plot_x
 plot_deriv                    |float4[]            | a list of length equal to the list of zeros given in positive_zeros_mid and positive_zeros_extra, giving the first derivative at each 0
-plot_extra                    |float4[]            | a list of triples [x,y,z], constraining y=Z(x) and z=dZ/dx (x)
+plot_extra                    |float4[]            | a list of triples [x,y,z], constraining y=Z(x) and z=Z^(1)(x)
 positive_zeros_mid            |numeric[]           | the midpoint of the first zeros, at most 10, represented as a ball
 positive_zeros_rad            |float8[]            | the radius of the first zeros, at most 10, represented as a ball
 positive_zeros_extra          |float8[]            | the remaining zeros via their correct double approximation.  These should be stored as far as we want the plot to extend.
 root_angle_mid                |numeric             | the midpoint of the argument of [root number] normalized between -.5 to .5
-root_angle_rad                |float8                | the radius point of the argument of [root number] normalized between -.5 to .5
-special_values_at             |float8[]            | an array of t's where L(t) has been computed as a ball, t is in analytic normalization
-special_values_mid            |numeric[]           | the midpoint of L(t)
-special_values_rad            |float8[]              | the radius of L(t)
+root_angle_rad                |float8              | the radius point of the argument of [root number] normalized between -.5 to .5
+special_values_at             |float8[]            | an array of {ti} where L^(ki)(ti) has been computed as a ball, ti is in arithmetic normalization
+special_values_der_order      |smallint[]          | the ki on the line above
+special_values_mid            |numeric[]           | the midpoint of L^(ki)(ti)
+special_values_rad            |float8[]            | the radius of L^(ki)(ti)
 
 
 [Dirichlet coefficient]: https://beta.lmfdb.org/knowledge/show/lfunction.dirichlet_series
