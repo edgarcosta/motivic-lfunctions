@@ -401,10 +401,12 @@ class lfunction_element(object):
         # CLAIM:  origin is okay
 
 
-        # TODO:  plot_x, plot_y, plot_deriv, plot_extra from plot_values, plot_delta, pos_zeros
-
-
         # TODO:  positive_zeros_mid, positive_zeros_rad, positive_zeros_extra from positive_zeros (currently jsonb, stored as string)
+
+
+        self.dual_zeros = [float(x) for x in self.dual_positive_zeros]
+        from convert_plot import convert_plot
+        self.plot_x, self.plot_y, self.plot_deriv, self.plot_extra = convert_plot(self.plot_values, self.positive_zeros_mid + self.positive_zeros_extra, self.order_of_vanishing, self.mu_imag, self.plot_delta, self.dual_plot_values, self.dual_zeros, self.dual_plot_delta)
 
 
         # TODO:  root_angle_mid, root_angle_rad from root_angle (currently double in interval [-0.5,0.5])
