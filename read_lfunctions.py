@@ -377,33 +377,32 @@ class lfunction_element(object):
             self.z2 = str(R(self.positive_zeros_arb[1]))[:-2]
             self.z3 = str(R(self.positive_zeros_arb[2]))[:-2]
 
-        # TODO:  update bad_lfactors (Dirichlet L-functions need to be massaged, only store for p > 100)
+        # TODO:  update bad_lfactors (Dirichlet L-functions need to be massaged, only store for p > 100) David Roe
 
 
-        # TODO:  convert conjugate from Lhash to label
+        # TODO:  convert conjugate from Lhash to label David Lowry-Duda
 
 
-        # TODO:  update euler_factors (check that data matches what we expect, only store for p < 100)
+        # TODO:  update euler_factors (check that data matches what we expect, only store for p < 100) David Roe
 
 
-        # CLAIM:  euler_factors_factorization is okay
+        # CLAIM:  euler_factors_factorization is okay David Roe
 
 
-        # TODO:  create factors, check that degrees add up, maybe create more factorizations when only know them partially (data from lfunc_instances)
+        # TODO:  create factors, check that degrees add up, maybe create more factorizations when only know them partially (data from lfunc_instances) David Lowry-Duda
 
 
-        # CLAIM:  label, index are okay
+        # CLAIM:  label, index are okay David Roe
 
-        # CLAIM:  origin is okay
+        # CLAIM:  origin is okay  David Roe
 
 
-        # TODO:  positive_zeros_mid, positive_zeros_rad, positive_zeros_extra from positive_zeros (currently jsonb, stored as string)
-
+        # TODO: Need dual_positive_zeros, dual_plot_values, dual_plot_delta as input
         self.dual_zeros = [float(x) for x in self.dual_positive_zeros]
         from convert_plot import convert_plot
         self.plot_x, self.plot_y, self.plot_deriv, self.plot_extra = convert_plot(self.plot_values, self.positive_zeros_mid + self.positive_zeros_extra, self.order_of_vanishing, self.mu_imag, self.plot_delta, self.dual_plot_values, self.dual_zeros, self.dual_plot_delta)
 
-        # TODO:  positive_zeros_mid, positive_zeros_rad, positive_zeros_extra from positive_zeros (currently jsonb, stored as string)
+        # TODO:  positive_zeros_mid, positive_zeros_rad, positive_zeros_extra from positive_zeros (currently jsonb, stored as string) David Lowry-Duda
     @lazy_attribute
     def positive_zeros_mid(self):
         ...
@@ -426,10 +425,10 @@ class lfunction_element(object):
         rad = 10**(-(len(self.leading_term.split('.')[-1]) - 2))
         return rad
 
-        # TODO:  root_angle_mid, root_angle_rad from root_angle (currently double in interval [-0.5,0.5])
+        # TODO:  root_angle_mid, root_angle_rad from root_angle (currently double in interval [-0.5,0.5]) David Lowry-Duda
 
 
-        # TODO:  special_values_at, special_values_der_order, special_values_mid, special_values_rad from values (currently seems to only exist sometimes, at 1)
+        # TODO:  special_values_at, special_values_der_order, special_values_mid, special_values_rad from values (currently seems to only exist sometimes, at 1) David Roe
 
     @lazy_attribute
     def positive_zeros_arb(self):
