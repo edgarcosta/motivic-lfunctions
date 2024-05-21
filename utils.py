@@ -232,10 +232,10 @@ def approx_ball(elt, prec=53):
     """
     # this is what we would get from such approximation
     approx_ball = realnumber_to_ball(elt.numerical_approx(prec=prec), RealBallField(prec))
-    if elt in approx_ball:
+    if elt in approx_ball: # this checks that the ball given is inside of the implicit ball
         return approx_ball.mid()
     else:
-        return None
+        raise RuntimeError("could not approximate ball to the desired precision")
 
 
 # to avoid the discontinuity at (-inf, 0], which will result in
