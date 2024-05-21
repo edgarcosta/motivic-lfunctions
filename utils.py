@@ -217,8 +217,8 @@ def numeric_to_ball(elt):
     bits = int(LOG_TEN_TWO_PLUS_EPSILON * sigfigs) + 1
     # note that the precision is already higher than what elt represents
     assert '.' in elt
-    # the last 3 digits might be off
-    rad = 10**(-(len(elt.split('.')[-1]) - 3))
+    # the last 2 digits might be off
+    rad = 10**(-(len(elt.split('.')[-1]) - 2))
     return RealBallField(bits)(elt, rad)
 
 
