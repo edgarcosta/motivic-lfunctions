@@ -7,11 +7,7 @@ import time
 from argparse import ArgumentParser
 from collections import Counter, defaultdict, OrderedDict
 from concurrent.futures import ThreadPoolExecutor
-from halo import (
-    Halo,
-    chunkify,
-    progress_bar,
-)
+from halo import Halo
 from sage.all import (
     CDF,
     ComplexBallField,
@@ -59,6 +55,7 @@ from utils import (
     approx_ball,
     atoii,
     ball_from_midpoint_100bits,
+    chunkify,
     coeff_to_poly,
     complexball_to_mid_rad_str,
     dirichlet_coefficients,
@@ -72,6 +69,7 @@ from utils import (
     normalized_arg,
     numeric_to_ball,
     prod_central_character,
+    progress_bar,
     realball_to_mid_rad_str,
     realnumber_to_ball,
     strip,

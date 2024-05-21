@@ -25,6 +25,24 @@ from sage.all import (
 from sage.rings.real_arb import RealBall
 from sage.rings.real_double import RealDoubleElement
 from sage.rings.real_mpfr import RealLiteral, RealField, RealNumber
+from itertools import islice
+
+
+def progress_bar(current, total, time, barLength=10):
+    percent = float(current) * 100 / total
+    if current > 0:
+        eta = '%.2f' % (time * (total - current) / float(current),)
+    else:
+        eta = '+oo'
+    done = '▰' * int(percent / 100 * barLength)
+    notdone = '▱' * (barLength - len(done))
+
+    return ' Progress: [%s%s] %.2f%% ETA: %s seconds' % (done, notdone, percent, eta)
+
+
+def chunkify(l, size=100):
+    return [islice(l, elt * size, (elt + 1) * size)
+            for elt in range(len(l) // size + 1)]
 
 
 lhash_regex = re.compile(r'^\d+([,]\d+)*$')
