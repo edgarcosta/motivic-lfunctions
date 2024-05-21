@@ -287,6 +287,29 @@ def approx_ball(elt, prec=53):
         raise RuntimeError("could not approximate ball to the desired precision")
 
 
+def complexnumber_to_ball(elt, R):
+    prec = R.prec()
+    if elt.is_real():
+        real_ball = realnumber_to_ball(elt, RealBallField(prec))
+        return R(real_ball, 0)
+    real_part = elt.real()
+    imag_part = elt.imag()
+    real_ball = realnumber_to_ball(real_part, RealBallField(prec))
+    imag_ball = realnumber_to_ball(imag_part, RealBallField(prec))
+    return R(real_ball, imag_ball)
+
+
+def complex_approx_ball(elt, prec=53):
+    """
+    If we can approximate the complex ball, returns the approximation.
+    """
+    approx_ball = complexnumber_to_ball(elt.numerical_approx(prec=prec), ComplexBallField(prec))
+    if elt in approx_ball:
+        return a.mid()
+    else:
+        raise RuntimeError("could not approximate ball to the desired precision.")
+
+
 # to avoid the discontinuity at (-inf, 0], which will result in
 # [+/- 3.15]
 def arg_hack(foo):
