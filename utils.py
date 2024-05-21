@@ -4,6 +4,7 @@ import re
 from collections.abc import Iterable
 from dirichlet_conrey import DirichletGroup_conrey, DirichletCharacter_conrey
 from sage.all import (
+    ComplexBallField,
     Integer,
     PolynomialRing,
     PowerSeriesRing,
@@ -24,6 +25,24 @@ from sage.all import (
 from sage.rings.real_arb import RealBall
 from sage.rings.real_double import RealDoubleElement
 from sage.rings.real_mpfr import RealLiteral, RealField, RealNumber
+from itertools import islice
+
+
+def progress_bar(current, total, time, barLength=10):
+    percent = float(current) * 100 / total
+    if current > 0:
+        eta = '%.2f' % (time * (total - current) / float(current),)
+    else:
+        eta = '+oo'
+    done = '▰' * int(percent / 100 * barLength)
+    notdone = '▱' * (barLength - len(done))
+
+    return ' Progress: [%s%s] %.2f%% ETA: %s seconds' % (done, notdone, percent, eta)
+
+
+def chunkify(l, size=100):
+    return [islice(l, elt * size, (elt + 1) * size)
+            for elt in range(len(l) // size + 1)]
 
 
 lhash_regex = re.compile(r'^\d+([,]\d+)*$')
@@ -186,7 +205,7 @@ def mid_point_100bits(elt):
     return eltint, ball
 
 
-def ball_from_midpoint(elt):
+def ball_from_midpoint_100bits(elt):
     assert isinstance(elt, str)
     rn = RealField(200)(elt)
     eltint = (rn << 100).round()
@@ -201,7 +220,8 @@ def numeric_to_ball(elt):
     """
     converts a string representing a real number into a ball
     by setting the radius such that the last two digits are unknown
-    as one usually doesn't truncate when printing floats to be able to recover all the binary digits
+    as one usually doesn't truncate when printing floats to be able to recover
+    all the binary digits
 
     sage: RIF(numeric_to_ball('1.2500'))
     1.25?
@@ -222,6 +242,53 @@ def numeric_to_ball(elt):
     return RealBallField(bits)(elt, rad)
 
 
+def complex_string_to_ball(elt):
+    """
+    Convert a string representing a complex number into a complex ball by
+    setting the radius such that the last two digits of the real parts and
+    imaginary parts are unknown.
+    """
+    assert isinstance(elt, str)
+    assert "." in elt   # don't handle trivial strings
+    split_symbol = None
+    if '+' in elt:
+        split_symbol = '+'
+    elif '-' in elt:
+        split_symbol = '-'
+    if split_symbol:
+        real_part, imag_part = elt.split(split_symbol)
+        sigfig_mantissa_real = real_part.lstrip('-+0.')
+        sigfigs_real = len(sigfig_mantissa_real) - ('.' in sigfig_mantissa_real)
+        bits_real = int(LOG_TEN_TWO_PLUS_EPSILON * sigfigs_real) + 1
+        rad_len_real = len(real_part.split('.')[-1])
+        rad_real = 10**(-(rad_len_real - 3))   # assume last 3 digits fuzzy
+
+        sigfig_mantissa_imag = imag_part.lstrip('-+0.').rstrip('iI*')
+        sigfigs_imag = len(sigfig_mantissa_imag) - ('.' in sigfig_mantissa_imag)
+        bits_imag = int(LOG_TEN_TWO_PLUS_EPSILON * sigfigs_imag) + 1
+        rad_len_imag = len(imag_part.split('.')[-1])
+        rad_imag = 10**(-(rad_len_imag - 3))   # assume last 3 digits fuzzy
+
+        bits = max(bits_real, bits_imag)
+        rad = max(rad_real, rad_imag)
+
+        real_part_ball = RealBallField(bits)(real_part, rad)
+        imag_part_ball = RealBallField(bits)(imag_part.rstrip('iI*'), rad)
+
+        return ComplexBallField(bits)(real_part_ball, imag_part_ball)
+    else:  # purely real or purely imaginary
+        sigfig_mantissa = elt.lstrip('-+0.').rstrip('iI*')
+        sigfigs = len(sigfig_mantissa) - ('.' in sigfig_mantissa)
+        bits = int(LOG_TEN_TWO_PLUS_EPSILON * sigfigs) + 1
+        rad_len = len(elt.rstrip('iI*').split('.')[-1])
+        rad = 10**(-(rad_len - 3))   # assume last 3 digits fuzzy
+        part_ball = RealBallField(bits)(elt.rstrip('iI*'), rad)
+        if "i" in elt or "I" in elt:
+            return ComplexBallField(bits)(0, part_ball)
+        else:
+            return ComplexBallField(bits)(part_ball, 0)
+
+
 def realnumber_to_ball(elt, R):
     return R(elt, float(elt.ulp()))
 
@@ -232,10 +299,33 @@ def approx_ball(elt, prec=53):
     """
     # this is what we would get from such approximation
     approx_ball = realnumber_to_ball(elt.numerical_approx(prec=prec), RealBallField(prec))
-    if elt in approx_ball:
+    if elt in approx_ball: # this checks that the ball given is inside of the implicit ball
         return approx_ball.mid()
     else:
-        return None
+        raise RuntimeError("could not approximate ball to the desired precision")
+
+
+def complexnumber_to_ball(elt, R):
+    prec = R.prec()
+    if elt.is_real():
+        real_ball = realnumber_to_ball(elt, RealBallField(prec))
+        return R(real_ball, 0)
+    real_part = elt.real()
+    imag_part = elt.imag()
+    real_ball = realnumber_to_ball(real_part, RealBallField(prec))
+    imag_ball = realnumber_to_ball(imag_part, RealBallField(prec))
+    return R(real_ball, imag_ball)
+
+
+def complex_approx_ball(elt, prec=53):
+    """
+    If we can approximate the complex ball, returns the approximation.
+    """
+    approx_ball = complexnumber_to_ball(elt.numerical_approx(prec=prec), ComplexBallField(prec))
+    if elt in approx_ball:
+        return a.mid()
+    else:
+        raise RuntimeError("could not approximate ball to the desired precision.")
 
 
 # to avoid the discontinuity at (-inf, 0], which will result in

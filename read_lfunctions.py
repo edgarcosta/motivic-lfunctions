@@ -1,19 +1,15 @@
-import ast
 import fcntl
-import json
 import os
-import re
 import subprocess
 import sys
 import tempfile
 import time
 from argparse import ArgumentParser
 from collections import Counter, defaultdict, OrderedDict
-from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
-from dirichlet_conrey import DirichletGroup_conrey, DirichletCharacter_conrey
 from halo import Halo
 from sage.all import (
+    arg,
     CDF,
     ComplexBallField,
     EllipticCurve,
@@ -29,6 +25,7 @@ from sage.all import (
     RBF,
     RDF,
     RR,
+    CC,
     RealBallField,
     RealIntervalField,
     ZZ,
@@ -54,112 +51,32 @@ from sage.rings.real_arb import RealBall
 from sage.rings.real_double import RealDoubleElement
 from sage.rings.real_mpfr import RealLiteral, RealField, RealNumber
 from sage.structure.unique_representation import CachedRepresentation
-
-
-def numeric_to_ball(elt):
-    """
-    converts a string representing a real number into a ball
-    by setting the radius such that the last two digits are unknown
-    as one usually doesn't truncate when printing floats to be able to recover all the binary digits
-
-    sage: RIF(numeric_to_ball('1.2500'))
-    1.25?
-    sage: numeric_to_ball('1.2500').endpoints()
-    (1.24199999998381, 1.25800000001619)
-    """
-    if isinstance(elt, float) or elt in RDF:
-        elt = RR(elt)
-        return RBF(elt, elt.ulp() * 0.5)
-    assert isinstance(elt, str)
-    sigfig_mantissa = elt.lstrip('-0.')
-    sigfigs = len(sigfig_mantissa) - ('.' in sigfig_mantissa)
-    bits = int(LOG_TEN_TWO_PLUS_EPSILON * sigfigs) + 1
-    # note that the precision is already higher than what elt represents
-    assert '.' in elt
-    # the last 3 digits might be off
-    rad = 10**(-(len(elt.split('.')[-1]) - 3))
-    return RealBallField(bits)(elt, rad)
-
-
-def realnumber_to_ball(elt, R):
-    return R(elt, float(elt.ulp()))
-
-
-def approx_ball(elt, prec=53):
-    """
-    if we can approximate the ball, returns such approximation
-    """
-    # this is what we would get from such approximation
-    approx_ball = realnumber_to_ball(elt.numerical_approx(prec=prec), RealBallField(prec))
-    if elt in approx_ball:
-        return approx_ball.mid()
-    else:
-        return None
-
-
-# to avoid the discontinuity at (-inf, 0], which will result in
-# [+/- 3.15]
-def arg_hack(foo):
-    if not foo.real().contains_zero() and foo.real().mid() < 0:
-        arg = (-foo).arg()
-        if arg > 0:
-            arg -= foo.parent().pi().real()
-        else:
-            arg += foo.parent().pi().real()
-        return arg
-    else:
-        return foo.arg()
-
-
-def normalized_arg(foo):
-    arg = arg_hack(foo) / (2 * foo.parent().pi())
-    while arg > 0.5:
-        arg -= 1
-    while arg <= -0.5:
-        arg += 1
-    return arg
-
-
-def extend_multiplicatively(Z):
-    for pp in prime_powers(len(Z) - 1):
-        for k in range(1, (len(Z) - 1) // pp + 1):
-            if gcd(k, pp) == 1:
-                Z[pp * k] = Z[pp] * Z[k]
-
-
-def dirichlet_coefficients(euler_factors):
-    R = vector(sum(euler_factors), []).base_ring()
-    PS = PowerSeriesRing(R)
-    pef = list(zip(primes_first_n(len(euler_factors)), euler_factors))
-    an_list_bound = next_prime(pef[-1][0])
-    res = [1] * an_list_bound
-    for p, ef in pef:
-        k = RR(an_list_bound).log(p).floor() + 1
-        foo = (1 / PS(ef)).padded_list(k)
-        for i in range(1, k):
-            res[p**i] = foo[i]
-    extend_multiplicatively(res)
-    return res
-
-
-@cached_function
-def DirGroup(m):
-    return DirichletGroup_conrey(m)
-
-
-@cached_function
-def primitivize(label):
-    m, n = [ZZ(a) for a in label.split(".")]
-    char = DirichletCharacter_conrey(DirGroup(m), n).primitive_character()
-    return "%d.%d" % (char.modulus(), char.number())
-
-
-def prod_central_character(labels):
-    char = prod([
-        DirichletCharacter_conrey(DirGroup(m), n).primitive_character()
-        for m, n in [[ZZ(a) for a in label.split(".")] for label in labels]
-    ]).primitive_character()
-    return "%d.%d" % (char.modulus(), char.number())
+from utils import (
+    DirGroup,
+    RealBallLiteral,
+    approx_ball,
+    atoii,
+    ball_from_midpoint_100bits,
+    chunkify,
+    coeff_to_poly,
+    complexball_to_mid_rad_str,
+    dirichlet_coefficients,
+    ec_lmfdb_label_regex,
+    enough_digits,
+    force_list_int,
+    json_dumps,
+    lhash_regex,
+    mid_point_100bits,
+    mod1,
+    normalized_arg,
+    numeric_to_ball,
+    complex_string_to_ball,
+    prod_central_character,
+    progress_bar,
+    realball_to_mid_rad_str,
+    realnumber_to_ball,
+    strip,
+)
 
 
 logpi = RR.pi().log()
@@ -174,7 +91,7 @@ def log_L_inf(s, mu, nu):
 
 
 @cached_function
-def conductor_an(GR, GC):
+def analytic_conductor_gamma(GR, GC):
     return (2 * log_L_inf(1 / 2, GR, GC).real()).exp()
 
 
@@ -349,6 +266,12 @@ class lfunction_element(object):
             # self.root_number_mid,  self.root_number_rad = complexball_to_mid_rad_str(self.root_number_acb)
             self.root_angle_mid, self.root_angle_rad = realball_to_mid_rad_str(arg)
 
+        # set root_angle_rad and root_angle_mid
+        self.set_root_angle()
+
+        # set zeros
+        self.set_zeros()
+
         if 'special_values_acb' in data:
             if self.self_dual:
                 # pin down the values to the real axis
@@ -452,7 +375,6 @@ class lfunction_element(object):
 
         # CLAIM:  origin is okay  David Roe
 
-
         # TODO: Need dual_positive_zeros, dual_plot_values, dual_plot_delta as input
         self.dual_zeros = [float(x) for x in self.dual_positive_zeros]
         from convert_plot import convert_plot
@@ -492,28 +414,15 @@ class lfunction_element(object):
         """
         return None
 
-    @lazy_attribute
-    def positive_zeros_mid(self):
-        ret = [RR(zero) for zero in self.positive_zeros[:10]]
-        return ret
-
-    @lazy_attribute
-    def positive_zeros_rad(self):
-        ret = []
-        if self.get('accuracy', None):
-            ret = [2**(-accuracy + 1) for _ in self.positive_zeros[:10]]
-            return ret
-        # We didn't store the accuracy. We assume all but the last two digits are correct.
-        ret = []
-        for zero in self.positive_zeros[:10]:
-            assert '.' in zero
-            ret.append(10**(-(len(zero.split('.')[-1]) - 2)))
-        return ret
-
-    @lazy_attribute
-    def positive_zeros_extra(self):
-        ret = [float(zero) for zero in self.positive_zeros[10:]]
-        return ret
+    def set_zeros(self):
+        zero_balls = [
+            numeric_to_ball(zero) for zero in self.positive_zeros[:10]
+        ]
+        self.positive_zeros_mid = [z.mid() for z in zero_balls]
+        self.positive_zeros_rad = [z.rad() for z in zero_balls]
+        self.positive_zeros_extra = [
+            approx_ball(zero) for zero in self.positive_zeros[10:]
+        ]
 
     @lazy_attribute
     def leading_term_mid(self):
@@ -525,22 +434,31 @@ class lfunction_element(object):
         rad = 10**(-(len(self.leading_term.split('.')[-1]) - 2))
         return rad
 
-    @lazy_attribute
-    def root_angle_mid(self):
-        return RR(self.root_angle)
+    def set_root_angle(self):
+        """
+        We recompute the root angle from the (old) stored root number.
 
-    @lazy_attribute
-    def root_angle_rad(self):
+        The root ange is in [-0.5, 0.5].
         """
-        If root_angle is a multiple of 0.25, then the error is 0. Otherwise,
-        assume the last two digits are unknown.
-        """
-        if self.root_angle_mid in (-0.5, -0.25, 0. 0.25, 0.5):
-            return 0
-        root_angle_str = str(self.root_angle_mid)
-        assert '.' in root_angle_str
-        rad = 10**(-(len(root_angle_str.split('.')[-1]) - 2))
-        return rad
+        # Handle special cases:
+        if CC(self.root_number) == 1:
+            self.root_angle_mid = 0
+            self.root_angle_rad = 0
+        elif CC(self.root_number) == -1:
+            self.root_angle_mid = -0.5
+            self.root_angle_rad = 0
+        elif CC(self.root_number) == 1j:
+            self.root_angle_mid = 0.25
+            self.root_angle_rad = 0
+        elif CC(self.root_number) == -1j:
+            self.root_angle_mid = -0.25
+            self.root_angle_rad = 0
+        else:
+            root_number_ball = complex_string_to_ball(self.root_number)
+            root_angle = arg(root_number_ball / (2 * pi))
+            self.root_angle_mid = root_angle.mid()
+            self.root_angle_rad = root_angle.rad()
+
 
         # TODO:  special_values_at, special_values_der_order, special_values_mid, special_values_rad from values (currently seems to only exist sometimes, at 1) David Roe
 
@@ -553,7 +471,7 @@ class lfunction_element(object):
                 return [RealBallLiteral(R, m, r) for m, r in zip(self.positive_zeros_mid, self.positive_zeros_rad)]
             elif getattr(self, 'positive_zeros', None):
                 if getattr(self, 'accuracy', None) == 100:
-                    positive_zeros_arb = [ball_from_midpoint(elt) for elt in self.positive_zeros]
+                    positive_zeros_arb = [ball_from_midpoint_100bits(elt) for elt in self.positive_zeros]
                     assert self.Lhash.split(',')[0] == str(mid_point_100bits(positive_zeros_arb[0])[0])
                 else:
                     positive_zeros_arb = [numeric_to_ball(elt) for elt in self.positive_zeros]
@@ -766,11 +684,13 @@ class lfunction_element(object):
         data['positive_zeros_extra'] = []
         rh_limit = 64 / data['degree']
         for elt in positive_zeros_arb[10:]:
-            approx = approx_ball(elt)
-            if elt is None or elt.mid() > rh_limit:
+            if elt.mid() > rh_limit:
                 break
-            else:
+            try:
+                approx = approx_ball(elt)
                 data['positive_zeros_extra'].append(approx)
+            except RuntimeError:
+                break
 
         if all(getattr(elt, 'self_dual', False) for elt in factors):
             data['self_dual'] = True
@@ -1019,7 +939,7 @@ class lfunction_element(object):
     def analytic_conductor(self):
         GF_analytic = [tuple(elt + self.analytic_normalization for elt in G)
                        for G in self.gamma_factors]
-        return float(self.conductor * conductor_an(*GF_analytic))
+        return float(self.conductor * analytic_conductor_gamma(*GF_analytic))
 
     @lazy_attribute
     def root_analytic_conductor(self):
