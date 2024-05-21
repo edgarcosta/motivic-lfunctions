@@ -381,44 +381,10 @@ class lfunction_element(object):
 
         # TODO:  update bad_lfactors (Dirichlet L-functions need to be massaged, only store for p > 100) David Roe
 
-        @lazy_attribute
-        def conjugate(self):
-            # TODO DLD - massage for however old data is presented
-            conjugate_lhash = old['conjugate']
-            if conjugate_lhash == old['Lhash']:
-                return self.label
-            # TODO DLD : assume LOOKUP_TABLE
-            conjugate_label = LOOKUP_TABLE[conjugate_lhash]['label']
-            return conjugate_label
-
         # TODO:  update euler_factors (check that data matches what we expect, only store for p < 100) David Roe
 
 
         # CLAIM:  euler_factors_factorization is okay David Roe
-
-        @lazy_attribute
-        def factors(self):
-            if self.primitive:
-                return [self.label]
-            ret = []
-            degree = self.degree
-            for instance in self.Lhash_array:
-                # TODO DLD : assume LOOKUP_TABLE
-                record = LOOKUP_TABLE[instance]
-                instance_degree = record['degree']
-                instance_label = record['label']
-                degree -= instance_degree
-                ret.append(instance_label)
-            if degree != 0:  # missing factors exist
-                ret.append('')
-            return ret
-
-        @lazy_attribute
-        def factors_shift(self):
-            """
-            We store no Lfunctions with shifted factors right now.
-            """
-            return None
 
 
         # CLAIM:  label, index are okay David Roe
@@ -430,6 +396,40 @@ class lfunction_element(object):
         self.dual_zeros = [float(x) for x in self.dual_positive_zeros]
         from convert_plot import convert_plot
         self.plot_x, self.plot_y, self.plot_deriv, self.plot_extra = convert_plot(self.plot_values, self.positive_zeros_mid + self.positive_zeros_extra, self.order_of_vanishing, self.mu_imag, self.plot_delta, self.dual_plot_values, self.dual_zeros, self.dual_plot_delta)
+
+    @lazy_attribute
+    def conjugate(self):
+        # TODO DLD - massage for however old data is presented
+        conjugate_lhash = old['conjugate']
+        if conjugate_lhash == old['Lhash']:
+            return self.label
+        # TODO DLD : assume LOOKUP_TABLE
+        conjugate_label = LOOKUP_TABLE[conjugate_lhash]['label']
+        return conjugate_label
+
+    @lazy_attribute
+    def factors(self):
+        if self.primitive:
+            return [self.label]
+        ret = []
+        degree = self.degree
+        for instance in self.Lhash_array:
+            # TODO DLD : assume LOOKUP_TABLE
+            record = LOOKUP_TABLE[instance]
+            instance_degree = record['degree']
+            instance_label = record['label']
+            degree -= instance_degree
+            ret.append(instance_label)
+        if degree != 0:  # missing factors exist
+            ret.append('')
+        return ret
+
+    @lazy_attribute
+    def factors_shift(self):
+        """
+        We store no Lfunctions with shifted factors right now.
+        """
+        return None
 
     @lazy_attribute
     def positive_zeros_mid(self):
