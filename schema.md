@@ -44,9 +44,9 @@ Data table: lfunc_table
 ____________
 | Field | type | description |
 |----------|    ------     | ----- |
-bad_lfactors                  |jsonb               | Euler factors for the bad primes as an array of [p, [1, -ap, ...]], if p is larger than 100
+bad_lfactors                  |jsonb               | Euler factors for the bad primes as an array of [p, [1, -ap, ...]], for p larger than 100
 conjugate                     |text                | the [label] of the conjugate L-function, if self-dual, then None
-euler_factors                 |jsonb               | the first [euler factors] stored as array of lists, if the L-func is not rational, we represent each coefficient as pair of doubles corresponding to the real, imaginary pair. We need jsonb to support different formats in the same column.  Store for p < 100.
+euler_factors                 |float8[]            | the first [euler factors] stored as array of lists, only for non-rational L-functions.  We represent each coefficient as pair of doubles corresponding to the real, imaginary pair. Store for p < 100.
 euler_factors_factorization |jsonb | If the L-func is rational of a degree larger than 4, we store the factorization of the euler_factors.  Need jsonb since factors can have different lengths
 factors                       |text[]              | an array with the labels of the primitive factors (potentially repeated), where the last entry will be Null if we don't know the full factorization
 factors_shift                 |numeric[]           | store the array s where L(s) = L1(s+w1) L2(s + w2) ... Ln(s + wn), NULL if all zeros

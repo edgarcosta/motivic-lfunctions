@@ -381,7 +381,68 @@ class lfunction_element(object):
 
         # TODO:  update bad_lfactors (Dirichlet L-functions need to be massaged, only store for p > 100) David Roe
 
-        # TODO:  update euler_factors (check that data matches what we expect, only store for p < 100) David Roe
+        if self.rational:
+            self.euler_factors = None
+        elif self.coeff_info is not None:
+            # Dirichlet L-function where Euler factors need to be adjusted
+            poly, approx, _ = self.coeff_info
+            ZZx = PolynomialRing(ZZ, 'x', sparse=True)
+            poly = ZZx(poly)
+            N = poly.degree()
+            assert poly == ZZx.gen()**N - 1
+            C = ComplexField(300)
+            m = C(approx).argument() * N / (2 * C.pi())
+            assert abs(m - m.real().round()) < 0.001
+            m = m.real().round()
+            assert m.gcd(N) == 1
+            Cball = ComplexBallField(300)
+            zeta = (2 * Cball.pi() * Cball.gen(0) * m / N)
+            def fix_euler_factor(fac):
+                if len(fac) == 1:
+                    assert fac == [1] or fac == [0] # This second is just wrong, but happens for 1-6259-6259.6258-r1-0-0 for example
+                    return [(float(1), float(0))]
+                assert len(fac) == 2 and fac[0] == 1
+                if isinstance(fac[1], int):
+                    return [(float(1), float(0)), (float(fac[1]), float(0))]
+                assert isinstance(fac[1], str) and fac[1].startswith("a^")
+                j = int(fac[1][2:])
+                return [(float(1), float(0)), complex_approx_ball(zeta**j)]
+            self.euler_factors = [fix_euler_factor(fac) for fac in self.euler_factors]
+        else:
+            zre = re.compile(r"-?([0-9.]+)(?:e-0*(\d+))?(?: [+-] ([0-9.]+)(?:e-0*(\d+))?)?(?:\*I)?")
+            def match_prec(base, e):
+                after_decimal = base.split(".")[1]
+                if e is None:
+                    return len(after_decimal)
+                return len(after_decimal) + int(e)
+            def fix_floatpair(coeff):
+                if isinstance(coeff, (int, float)):
+                    ans = (float(coeff), float(0))
+                    if self.algebraic:
+                        return ans
+                    return ans + (float(0),)
+                if isinstance(coeff, (list, tuple)) and len(coeff) == 2:
+                    ans = tuple(float(x) for x in coeff)
+                    if self.algebraic:
+                        return ans
+                    return ans + (float(0),)
+                if isinstance(coeff, str):
+                    assert not self.algebraic
+                    if coeff == "??":
+                        return (None, None, None)
+                    z = ComplexDoubleField()(coeff)
+                    m = zre.fullmatch(coeff)
+                    reprec = match_prec(m.group(1), m.group(2))
+                    if m.group(3) is not None:
+                        reprec = min(reprec, match_prec(m.group(3), m.group(4)))
+                    return (float(z.real()), float(z.imag()), float(5*10**(-reprec-1)))
+            def fix_euler_factor(fac):
+                ans = [fix_floatpair(coeff) for coeff in fac]
+                if len(ans) < self.degree + 1:
+                    ans += [fix_floatpair(0)] * (self.degree + 1 - len(ans))
+                return ans
+            self.euler_factors = self.euler_factors[:25] # only storing primes up to 100
+            self.euler_factors = [fix_euler_factor(fac) for fac in self.euler_factors]
 
 
         # CLAIM:  euler_factors_factorization is okay David Roe
