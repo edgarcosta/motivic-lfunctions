@@ -380,17 +380,42 @@ class lfunction_element(object):
 
         # TODO:  update bad_lfactors (Dirichlet L-functions need to be massaged, only store for p > 100) David Roe
 
-
-        # TODO:  convert conjugate from Lhash to label David Lowry-Duda
-
+        @lazy_attribute
+        def conjugate(self):
+            # TODO DLD - massage for however old data is presented
+            conjugate_lhash = old['conjugate']
+            if conjugate_lhash == old['Lhash']:
+                return self.label
+            # TODO DLD : db lookup instance, just for conjugate_label
+            return conjugate_label
 
         # TODO:  update euler_factors (check that data matches what we expect, only store for p < 100) David Roe
 
-
         # CLAIM:  euler_factors_factorization is okay David Roe
 
+        @lazy_attribute
+        def factors(self):
+            if self.primitive:
+                return [self.label]
+            ret = []
+            degree = self.degree
+            for instance in self.Lhash_array:
+                # TODO DLD : db lookup instance.
+                # populate
+                #   - instance_degree
+                #   - instance_label
+                degree -= instance_degree
+                ret.append(instance_label)
+            if degree != 0:  # missing factors exist
+                ret.append('')
+            return ret
 
-        # TODO:  create factors, check that degrees add up, maybe create more factorizations when only know them partially (data from lfunc_instances) David Lowry-Duda
+        @lazy_attribute
+        def factors_shift(self):
+            """
+            We store no Lfunctions with shifted factors right now.
+            """
+            return None
 
 
         # CLAIM:  label, index are okay David Roe
