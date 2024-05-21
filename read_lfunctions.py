@@ -54,31 +54,8 @@ from sage.rings.real_arb import RealBall
 from sage.rings.real_double import RealDoubleElement
 from sage.rings.real_mpfr import RealLiteral, RealField, RealNumber
 from sage.structure.unique_representation import CachedRepresentation
+from utils import numeric_to_ball
 
-
-def numeric_to_ball(elt):
-    """
-    converts a string representing a real number into a ball
-    by setting the radius such that the last two digits are unknown
-    as one usually doesn't truncate when printing floats to be able to recover all the binary digits
-
-    sage: RIF(numeric_to_ball('1.2500'))
-    1.25?
-    sage: numeric_to_ball('1.2500').endpoints()
-    (1.24199999998381, 1.25800000001619)
-    """
-    if isinstance(elt, float) or elt in RDF:
-        elt = RR(elt)
-        return RBF(elt, elt.ulp() * 0.5)
-    assert isinstance(elt, str)
-    sigfig_mantissa = elt.lstrip('-0.')
-    sigfigs = len(sigfig_mantissa) - ('.' in sigfig_mantissa)
-    bits = int(LOG_TEN_TWO_PLUS_EPSILON * sigfigs) + 1
-    # note that the precision is already higher than what elt represents
-    assert '.' in elt
-    # the last 3 digits might be off
-    rad = 10**(-(len(elt.split('.')[-1]) - 3))
-    return RealBallField(bits)(elt, rad)
 
 
 def realnumber_to_ball(elt, R):
@@ -91,10 +68,10 @@ def approx_ball(elt, prec=53):
     """
     # this is what we would get from such approximation
     approx_ball = realnumber_to_ball(elt.numerical_approx(prec=prec), RealBallField(prec))
-    if elt in approx_ball:
+    if elt in approx_ball: # this checks that the ball given is inside of the implicit ball
         return approx_ball.mid()
     else:
-        return None
+        raise RuntimeError("could not approximate ball to the desired precision")
 
 
 # to avoid the discontinuity at (-inf, 0], which will result in
@@ -474,7 +451,7 @@ class lfunction_element(object):
         If root_angle is a multiple of 0.25, then the error is 0. Otherwise,
         assume the last two digits are unknown.
         """
-        if self.root_angle_mid in (-0.5, -0.25, 0. 0.25, 0.5):
+        if self.root_angle_mid in (-0.5, -0.25, 0., 0.25, 0.5):
             return 0
         root_angle_str = str(self.root_angle_mid)
         assert '.' in root_angle_str
@@ -705,11 +682,13 @@ class lfunction_element(object):
         data['positive_zeros_extra'] = []
         rh_limit = 64 / data['degree']
         for elt in positive_zeros_arb[10:]:
-            approx = approx_ball(elt)
-            if elt is None or elt.mid() > rh_limit:
+            if elt.mid() > rh_limit:
                 break
-            else:
+            try:
+                approx = approx_ball(elt)
                 data['positive_zeros_extra'].append(approx)
+            except RuntimeError:
+                break
 
         if all(getattr(elt, 'self_dual', False) for elt in factors):
             data['self_dual'] = True
