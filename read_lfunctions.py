@@ -1,17 +1,12 @@
-import ast
 import fcntl
-import json
 import os
-import re
 import subprocess
 import sys
 import tempfile
 import time
 from argparse import ArgumentParser
 from collections import Counter, defaultdict, OrderedDict
-from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
-from dirichlet_conrey import DirichletGroup_conrey, DirichletCharacter_conrey
 from halo import (
     Halo,
     chunkify,
@@ -368,7 +363,7 @@ class lfunction_element(object):
     def positive_zeros_rad(self):
         ret = []
         if self.get('accuracy', None):
-            ret = [2**(-accuracy + 1) for _ in self.positive_zeros[:10]]
+            ret = [2**(-self.accuracy + 1) for _ in self.positive_zeros[:10]]
             return ret
         # We didn't store the accuracy. We assume all but the last two digits are correct.
         ret = []
@@ -379,7 +374,7 @@ class lfunction_element(object):
 
     @lazy_attribute
     def positive_zeros_extra(self):
-        ret = [float(zero) for zero in self.positive_zeros[10:]]
+        ret = [approx_ball(zero) for zero in self.positive_zeros[10:]]
         return ret
 
     @lazy_attribute
