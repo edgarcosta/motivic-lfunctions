@@ -13,6 +13,7 @@ from halo import (
     progress_bar,
 )
 from sage.all import (
+    arg,
     CDF,
     ComplexBallField,
     EllipticCurve,
@@ -28,6 +29,7 @@ from sage.all import (
     RBF,
     RDF,
     RR,
+    CC,
     RealBallField,
     RealIntervalField,
     ZZ,
@@ -71,18 +73,12 @@ from utils import (
     mod1,
     normalized_arg,
     numeric_to_ball,
+    complex_string_to_ball,
     prod_central_character,
     realball_to_mid_rad_str,
     realnumber_to_ball,
     strip,
 )
-
-
-
-
-
-
-
 
 
 logpi = RR.pi().log()
@@ -314,6 +310,8 @@ class lfunction_element(object):
 
         # CLAIM:  origin is okay  David Roe
 
+        # set root_angle_rad and root_angle_mid
+        self.compute_root_angle()
 
         # TODO: Need dual_positive_zeros, dual_plot_values, dual_plot_delta as input
         self.dual_zeros = [float(x) for x in self.dual_positive_zeros]
@@ -386,6 +384,31 @@ class lfunction_element(object):
         """Assume the last two digits are unknown."""
         rad = 10**(-(len(self.leading_term.split('.')[-1]) - 2))
         return rad
+
+    def compute_root_angle(self):
+        """
+        We recompute the root angle from the (old) stored root number.
+
+        The root ange is in [-0.5, 0.5].
+        """
+        # Handle special cases:
+        if CC(self.root_number) == 1:
+            self.root_angle_mid = 0
+            self.root_angle_rad = 0
+        elif CC(self.root_number) == -1:
+            self.root_angle_mid = -0.5
+            self.root_angle_rad = 0
+        elif CC(self.root_number) == 1j:
+            self.root_angle_mid = 0.25
+            self.root_angle_rad = 0
+        elif CC(self.root_number) == -1j:
+            self.root_angle_mid = -0.25
+            self.root_angle_rad = 0
+        else:
+            root_number_ball = complex_string_to_ball(self.root_number)
+            root_angle = arg(root_number_ball / (2 * pi))
+            self.root_angle_mid = root_angle.mid()
+            self.root_angle_rad = root_angle.rad()
 
     @lazy_attribute
     def root_angle_mid(self):
