@@ -1,18 +1,17 @@
-import ast
 import fcntl
-import json
 import os
-import re
 import subprocess
 import sys
 import tempfile
 import time
 from argparse import ArgumentParser
 from collections import Counter, defaultdict, OrderedDict
-from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
-from dirichlet_conrey import DirichletGroup_conrey, DirichletCharacter_conrey
-from halo import Halo
+from halo import (
+    Halo,
+    chunkify,
+    progress_bar,
+)
 from sage.all import (
     CDF,
     ComplexBallField,
@@ -55,12 +54,27 @@ from sage.rings.real_double import RealDoubleElement
 from sage.rings.real_mpfr import RealLiteral, RealField, RealNumber
 from sage.structure.unique_representation import CachedRepresentation
 from utils import (
-    numeric_to_ball,
-    approx_ball,
-    normalized_arg,
-    dirichlet_coefficients,
     DirGroup,
+    RealBallLiteral,
+    approx_ball,
+    atoii,
+    ball_from_midpoint_100bits,
+    coeff_to_poly,
+    complexball_to_mid_rad_str,
+    dirichlet_coefficients,
+    ec_lmfdb_label_regex,
+    enough_digits,
+    force_list_int,
+    json_dumps,
+    lhash_regex,
+    mid_point_100bits,
+    mod1,
+    normalized_arg,
+    numeric_to_ball,
     prod_central_character,
+    realball_to_mid_rad_str,
+    realnumber_to_ball,
+    strip,
 )
 
 
@@ -349,7 +363,7 @@ class lfunction_element(object):
     def positive_zeros_rad(self):
         ret = []
         if self.get('accuracy', None):
-            ret = [2**(-accuracy + 1) for _ in self.positive_zeros[:10]]
+            ret = [2**(-self.accuracy + 1) for _ in self.positive_zeros[:10]]
             return ret
         # We didn't store the accuracy. We assume all but the last two digits are correct.
         ret = []
@@ -360,7 +374,7 @@ class lfunction_element(object):
 
     @lazy_attribute
     def positive_zeros_extra(self):
-        ret = [float(zero) for zero in self.positive_zeros[10:]]
+        ret = [approx_ball(zero) for zero in self.positive_zeros[10:]]
         return ret
 
     @lazy_attribute
@@ -401,7 +415,7 @@ class lfunction_element(object):
                 return [RealBallLiteral(R, m, r) for m, r in zip(self.positive_zeros_mid, self.positive_zeros_rad)]
             elif getattr(self, 'positive_zeros', None):
                 if getattr(self, 'accuracy', None) == 100:
-                    positive_zeros_arb = [ball_from_midpoint(elt) for elt in self.positive_zeros]
+                    positive_zeros_arb = [ball_from_midpoint_100bits(elt) for elt in self.positive_zeros]
                     assert self.Lhash.split(',')[0] == str(mid_point_100bits(positive_zeros_arb[0])[0])
                 else:
                     positive_zeros_arb = [numeric_to_ball(elt) for elt in self.positive_zeros]
