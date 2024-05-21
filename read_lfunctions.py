@@ -266,6 +266,12 @@ class lfunction_element(object):
             # self.root_number_mid,  self.root_number_rad = complexball_to_mid_rad_str(self.root_number_acb)
             self.root_angle_mid, self.root_angle_rad = realball_to_mid_rad_str(arg)
 
+        # set root_angle_rad and root_angle_mid
+        self.set_root_angle()
+
+        # set zeros
+        self.set_zeros()
+
         if 'special_values_acb' in data:
             if self.self_dual:
                 # pin down the values to the real axis
@@ -308,9 +314,6 @@ class lfunction_element(object):
 
         # CLAIM:  origin is okay  David Roe
 
-        # set root_angle_rad and root_angle_mid
-        self.compute_root_angle()
-
         # TODO: Need dual_positive_zeros, dual_plot_values, dual_plot_delta as input
         self.dual_zeros = [float(x) for x in self.dual_positive_zeros]
         from convert_plot import convert_plot
@@ -350,28 +353,15 @@ class lfunction_element(object):
         """
         return None
 
-    @lazy_attribute
-    def positive_zeros_mid(self):
-        ret = [RR(zero) for zero in self.positive_zeros[:10]]
-        return ret
-
-    @lazy_attribute
-    def positive_zeros_rad(self):
-        ret = []
-        if self.get('accuracy', None):
-            ret = [2**(-self.accuracy + 1) for _ in self.positive_zeros[:10]]
-            return ret
-        # We didn't store the accuracy. We assume all but the last two digits are correct.
-        ret = []
-        for zero in self.positive_zeros[:10]:
-            assert '.' in zero
-            ret.append(10**(-(len(zero.split('.')[-1]) - 2)))
-        return ret
-
-    @lazy_attribute
-    def positive_zeros_extra(self):
-        ret = [approx_ball(zero) for zero in self.positive_zeros[10:]]
-        return ret
+    def set_zeros(self):
+        zero_balls = [
+            numeric_to_ball(zero) for zero in self.positive_zeros[:10]
+        ]
+        self.positive_zeros_mid = [z.mid() for z in zero_balls]
+        self.positive_zeros_rad = [z.rad() for z in zero_balls]
+        self.positive_zeros_extra = [
+            approx_ball(zero) for zero in self.positive_zeros[10:]
+        ]
 
     @lazy_attribute
     def leading_term_mid(self):
@@ -383,7 +373,7 @@ class lfunction_element(object):
         rad = 10**(-(len(self.leading_term.split('.')[-1]) - 2))
         return rad
 
-    def compute_root_angle(self):
+    def set_root_angle(self):
         """
         We recompute the root angle from the (old) stored root number.
 
