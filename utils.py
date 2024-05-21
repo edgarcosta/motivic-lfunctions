@@ -4,6 +4,7 @@ import re
 from collections.abc import Iterable
 from dirichlet_conrey import DirichletGroup_conrey, DirichletCharacter_conrey
 from sage.all import (
+    ComplexBallField,
     Integer,
     PolynomialRing,
     PowerSeriesRing,
@@ -201,7 +202,8 @@ def numeric_to_ball(elt):
     """
     converts a string representing a real number into a ball
     by setting the radius such that the last two digits are unknown
-    as one usually doesn't truncate when printing floats to be able to recover all the binary digits
+    as one usually doesn't truncate when printing floats to be able to recover
+    all the binary digits
 
     sage: RIF(numeric_to_ball('1.2500'))
     1.25?
@@ -217,9 +219,56 @@ def numeric_to_ball(elt):
     bits = int(LOG_TEN_TWO_PLUS_EPSILON * sigfigs) + 1
     # note that the precision is already higher than what elt represents
     assert '.' in elt
-    # the last 2 digits might be off
-    rad = 10**(-(len(elt.split('.')[-1]) - 2))
+    # the last 3 digits might be off
+    rad = 10**(-(len(elt.split('.')[-1]) - 3))
     return RealBallField(bits)(elt, rad)
+
+
+def complex_string_to_ball(elt):
+    """
+    Convert a string representing a complex number into a complex ball by
+    setting the radius such that the last two digits of the real parts and
+    imaginary parts are unknown.
+    """
+    assert isinstance(elt, str)
+    assert "." in elt   # don't handle trivial strings
+    split_symbol = None
+    if '+' in elt:
+        split_symbol = '+'
+    elif '-' in elt:
+        split_symbol = '-'
+    if split_symbol:
+        real_part, imag_part = elt.split(split_symbol)
+        sigfig_mantissa_real = real_part.lstrip('-+0.')
+        sigfigs_real = len(sigfig_mantissa_real) - ('.' in sigfig_mantissa_real)
+        bits_real = int(LOG_TEN_TWO_PLUS_EPSILON * sigfigs_real) + 1
+        rad_len_real = len(real_part.split('.')[-1])
+        rad_real = 10**(-(rad_len_real - 3))   # assume last 3 digits fuzzy
+
+        sigfig_mantissa_imag = imag_part.lstrip('-+0.').rstrip('iI*')
+        sigfigs_imag = len(sigfig_mantissa_imag) - ('.' in sigfig_mantissa_imag)
+        bits_imag = int(LOG_TEN_TWO_PLUS_EPSILON * sigfigs_imag) + 1
+        rad_len_imag = len(imag_part.split('.')[-1])
+        rad_imag = 10**(-(rad_len_imag - 3))   # assume last 3 digits fuzzy
+
+        bits = max(bits_real, bits_imag)
+        rad = max(rad_real, rad_imag)
+
+        real_part_ball = RealBallField(bits)(real_part, rad)
+        imag_part_ball = RealBallField(bits)(imag_part.rstrip('iI*'), rad)
+
+        return ComplexBallField(bits)(real_part_ball, imag_part_ball)
+    else:  # purely real or purely imaginary
+        sigfig_mantissa = elt.lstrip('-+0.').rstrip('iI*')
+        sigfigs = len(sigfig_mantissa) - ('.' in sigfig_mantissa)
+        bits = int(LOG_TEN_TWO_PLUS_EPSILON * sigfigs) + 1
+        rad_len = len(elt.rstrip('iI*').split('.')[-1])
+        rad = 10**(-(rad_len - 3))   # assume last 3 digits fuzzy
+        part_ball = RealBallField(bits)(elt.rstrip('iI*'), rad)
+        if "i" in elt or "I" in elt:
+            return ComplexBallField(bits)(0, part_ball)
+        else:
+            return ComplexBallField(bits)(part_ball, 0)
 
 
 def realnumber_to_ball(elt, R):
