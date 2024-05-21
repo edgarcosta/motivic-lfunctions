@@ -186,7 +186,7 @@ def mid_point_100bits(elt):
     return eltint, ball
 
 
-def ball_from_midpoint(elt):
+def ball_from_midpoint_100bits(elt):
     assert isinstance(elt, str)
     rn = RealField(200)(elt)
     eltint = (rn << 100).round()
