@@ -301,6 +301,7 @@ class lfunction_element(object):
 
     def __init__(self, data, from_db=False):
         # TODO: Deal with loading data from multiple tables Edgar Costa
+          # XXX: use lfunc_search.root_angle, not lfunc_lfunctions.root_angle
         # TODO: Run on a sample that includes all instance types Edgar Costa
         self.algebraic = True
         self.coeff_info = None
@@ -435,8 +436,22 @@ class lfunction_element(object):
         rad = 10**(-(len(self.leading_term.split('.')[-1]) - 2))
         return rad
 
-        # TODO:  root_angle_mid, root_angle_rad from root_angle (currently double in interval [-0.5,0.5]) David Lowry-Duda
+    @lazy_attribute
+    def root_angle_mid(self):
+        return RR(self.root_angle)
 
+    @lazy_attribute
+    def root_angle_rad(self):
+        """
+        If root_angle is a multiple of 0.25, then the error is 0. Otherwise,
+        assume the last two digits are unknown.
+        """
+        if self.root_angle_mid in (-0.5, -0.25, 0. 0.25, 0.5):
+            return 0
+        root_angle_str = str(self.root_angle_mid)
+        assert '.' in root_angle_str
+        rad = 10**(-(len(root_angle_str.split('.')[-1]) - 2))
+        return rad
 
         # TODO:  special_values_at, special_values_der_order, special_values_mid, special_values_rad from values (currently seems to only exist sometimes, at 1) David Roe
 
