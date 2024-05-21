@@ -54,89 +54,21 @@ from sage.rings.real_arb import RealBall
 from sage.rings.real_double import RealDoubleElement
 from sage.rings.real_mpfr import RealLiteral, RealField, RealNumber
 from sage.structure.unique_representation import CachedRepresentation
-from utils import numeric_to_ball
+from utils import (
+    numeric_to_ball,
+    approx_ball,
+    normalized_arg,
+    dirichlet_coefficients,
+    DirGroup,
+    prod_central_character,
+)
 
 
 
-def realnumber_to_ball(elt, R):
-    return R(elt, float(elt.ulp()))
 
 
-def approx_ball(elt, prec=53):
-    """
-    if we can approximate the ball, returns such approximation
-    """
-    # this is what we would get from such approximation
-    approx_ball = realnumber_to_ball(elt.numerical_approx(prec=prec), RealBallField(prec))
-    if elt in approx_ball: # this checks that the ball given is inside of the implicit ball
-        return approx_ball.mid()
-    else:
-        raise RuntimeError("could not approximate ball to the desired precision")
 
 
-# to avoid the discontinuity at (-inf, 0], which will result in
-# [+/- 3.15]
-def arg_hack(foo):
-    if not foo.real().contains_zero() and foo.real().mid() < 0:
-        arg = (-foo).arg()
-        if arg > 0:
-            arg -= foo.parent().pi().real()
-        else:
-            arg += foo.parent().pi().real()
-        return arg
-    else:
-        return foo.arg()
-
-
-def normalized_arg(foo):
-    arg = arg_hack(foo) / (2 * foo.parent().pi())
-    while arg > 0.5:
-        arg -= 1
-    while arg <= -0.5:
-        arg += 1
-    return arg
-
-
-def extend_multiplicatively(Z):
-    for pp in prime_powers(len(Z) - 1):
-        for k in range(1, (len(Z) - 1) // pp + 1):
-            if gcd(k, pp) == 1:
-                Z[pp * k] = Z[pp] * Z[k]
-
-
-def dirichlet_coefficients(euler_factors):
-    R = vector(sum(euler_factors), []).base_ring()
-    PS = PowerSeriesRing(R)
-    pef = list(zip(primes_first_n(len(euler_factors)), euler_factors))
-    an_list_bound = next_prime(pef[-1][0])
-    res = [1] * an_list_bound
-    for p, ef in pef:
-        k = RR(an_list_bound).log(p).floor() + 1
-        foo = (1 / PS(ef)).padded_list(k)
-        for i in range(1, k):
-            res[p**i] = foo[i]
-    extend_multiplicatively(res)
-    return res
-
-
-@cached_function
-def DirGroup(m):
-    return DirichletGroup_conrey(m)
-
-
-@cached_function
-def primitivize(label):
-    m, n = [ZZ(a) for a in label.split(".")]
-    char = DirichletCharacter_conrey(DirGroup(m), n).primitive_character()
-    return "%d.%d" % (char.modulus(), char.number())
-
-
-def prod_central_character(labels):
-    char = prod([
-        DirichletCharacter_conrey(DirGroup(m), n).primitive_character()
-        for m, n in [[ZZ(a) for a in label.split(".")] for label in labels]
-    ]).primitive_character()
-    return "%d.%d" % (char.modulus(), char.number())
 
 
 logpi = RR.pi().log()
@@ -151,7 +83,7 @@ def log_L_inf(s, mu, nu):
 
 
 @cached_function
-def conductor_an(GR, GC):
+def analytic_conductor_gamma(GR, GC):
     return (2 * log_L_inf(1 / 2, GR, GC).real()).exp()
 
 
@@ -937,7 +869,7 @@ class lfunction_element(object):
     def analytic_conductor(self):
         GF_analytic = [tuple(elt + self.analytic_normalization for elt in G)
                        for G in self.gamma_factors]
-        return float(self.conductor * conductor_an(*GF_analytic))
+        return float(self.conductor * analytic_conductor_gamma(*GF_analytic))
 
     @lazy_attribute
     def root_analytic_conductor(self):
