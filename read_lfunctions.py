@@ -386,10 +386,12 @@ class lfunction_element(object):
             conjugate_lhash = old['conjugate']
             if conjugate_lhash == old['Lhash']:
                 return self.label
-            # TODO DLD : db lookup instance, just for conjugate_label
+            # TODO DLD : assume LOOKUP_TABLE
+            conjugate_label = LOOKUP_TABLE[conjugate_lhash]['label']
             return conjugate_label
 
         # TODO:  update euler_factors (check that data matches what we expect, only store for p < 100) David Roe
+
 
         # CLAIM:  euler_factors_factorization is okay David Roe
 
@@ -400,10 +402,10 @@ class lfunction_element(object):
             ret = []
             degree = self.degree
             for instance in self.Lhash_array:
-                # TODO DLD : db lookup instance.
-                # populate
-                #   - instance_degree
-                #   - instance_label
+                # TODO DLD : assume LOOKUP_TABLE
+                record = LOOKUP_TABLE[instance]
+                instance_degree = record['degree']
+                instance_label = record['label']
                 degree -= instance_degree
                 ret.append(instance_label)
             if degree != 0:  # missing factors exist
